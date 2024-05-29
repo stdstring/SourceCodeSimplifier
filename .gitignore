@@ -1,0 +1,5 @@
+*.user
+SourceCodeSimplifier/**/.vs/*
+SourceCodeSimplifier/**/bin/*
+SourceCodeSimplifier/**/obj/*
+SourceCodeSimplifier/**/Properties/*
