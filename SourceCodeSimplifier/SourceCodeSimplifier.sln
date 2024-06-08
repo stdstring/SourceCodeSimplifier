@@ -7,9 +7,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SourceCodeSimplifierConcept
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SourceCodeSimplifierConceptSource", "SourceCodeSimplifierConceptSource\SourceCodeSimplifierConceptSource.csproj", "{62F8B3B0-48F3-42EF-9166-3DB81EC05630}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SourceCodeSimplifierApp", "SourceCodeSimplifierApp\SourceCodeSimplifierApp.csproj", "{BDC47485-4CE2-4B16-A056-E55D6089915C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SourceCodeSimplifierApp", "SourceCodeSimplifierApp\SourceCodeSimplifierApp.csproj", "{BDC47485-4CE2-4B16-A056-E55D6089915C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SourceCodeSimplifierAppTests", "SourceCodeSimplifierAppTests\SourceCodeSimplifierAppTests.csproj", "{481EA0C9-CA69-4A20-853B-24BB84DA9CD5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SourceCodeSimplifierAppTests", "SourceCodeSimplifierAppTests\SourceCodeSimplifierAppTests.csproj", "{481EA0C9-CA69-4A20-853B-24BB84DA9CD5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SourceCodeSimplifierAppTestsTarget", "SourceCodeSimplifierAppTestsTarget\SourceCodeSimplifierAppTestsTarget.csproj", "{C9E7A68D-A3DF-4657-804F-BFA369A1F92A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SourceCodeSimplifierAppTestsExpected", "SourceCodeSimplifierAppTestsExpected\SourceCodeSimplifierAppTestsExpected.csproj", "{B8CEC4E4-FB1B-48B8-9CD7-551A7A1543D8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +37,14 @@ Global
 		{481EA0C9-CA69-4A20-853B-24BB84DA9CD5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{481EA0C9-CA69-4A20-853B-24BB84DA9CD5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{481EA0C9-CA69-4A20-853B-24BB84DA9CD5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C9E7A68D-A3DF-4657-804F-BFA369A1F92A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C9E7A68D-A3DF-4657-804F-BFA369A1F92A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C9E7A68D-A3DF-4657-804F-BFA369A1F92A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C9E7A68D-A3DF-4657-804F-BFA369A1F92A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B8CEC4E4-FB1B-48B8-9CD7-551A7A1543D8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B8CEC4E4-FB1B-48B8-9CD7-551A7A1543D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B8CEC4E4-FB1B-48B8-9CD7-551A7A1543D8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B8CEC4E4-FB1B-48B8-9CD7-551A7A1543D8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

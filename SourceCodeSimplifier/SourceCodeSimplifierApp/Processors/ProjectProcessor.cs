@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.MSBuild;
 using SourceCodeSimplifierApp.Output;
 using SourceCodeSimplifierApp.Transformers;
 using SourceCodeSimplifierApp.Utils;
+using System.Diagnostics;
 
 namespace SourceCodeSimplifierApp.Processors
 {
@@ -58,6 +59,8 @@ namespace SourceCodeSimplifierApp.Processors
         {
             if (sourceDocument.FilePath == null)
                 throw new InvalidOperationException("Bad document (without defined path)");
+            if (ProjectIgnoredFiles.IgnoreFile(sourceDocument.FilePath))
+                return sourceDocument;
             String filePath = sourceDocument.FilePath;
             Document destDocument = sourceDocument;
             _output.WriteInfoLine($"Processing of the file {filePath} is started");
