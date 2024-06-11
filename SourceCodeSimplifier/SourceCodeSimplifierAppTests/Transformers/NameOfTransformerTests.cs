@@ -1,0 +1,229 @@
+﻿using NUnit.Framework;
+using SourceCodeSimplifierApp.Config;
+using SourceCodeSimplifierApp.Output;
+using SourceCodeSimplifierApp.Transformers;
+using SourceCodeSimplifierAppTests.TestUtils;
+
+namespace SourceCodeSimplifierAppTests.Transformers
+{
+    [TestFixture]
+    public class NameOfTransformerTests
+    {
+        [TestCase(OutputLevel.Error)]
+        [TestCase(OutputLevel.Warning)]
+        public void ProcessWithNameOfExpr(OutputLevel outputLevel)
+        {
+            const String source = "namespace SomeNamespace\r\n" +
+                                  "{\r\n" +
+                                  "    public class SomeClass\r\n" +
+                                  "    {\r\n" +
+                                  "        public void SomeMethod()\r\n" +
+                                  "        {\r\n" +
+                                  "            string s1 = nameof(SomeMethod);\r\n" +
+                                  "            string s2 = nameof(SomeClass);\r\n" +
+                                  "            string s3 = nameof(SomeNamespace);\r\n" +
+                                  "        }\r\n" +
+                                  "    }\r\n" +
+                                  "}";
+            const String expectedResult = "namespace SomeNamespace\r\n" +
+                                          "{\r\n" +
+                                          "    public class SomeClass\r\n" +
+                                          "    {\r\n" +
+                                          "        public void SomeMethod()\r\n" +
+                                          "        {\r\n" +
+                                          "            string s1 = \"SomeMethod\";\r\n" +
+                                          "            string s2 = \"SomeClass\";\r\n" +
+                                          "            string s3 = \"SomeNamespace\";\r\n" +
+                                          "        }\r\n" +
+                                          "    }\r\n" +
+                                          "}";
+            TransformerHelper transformerHelper = new TransformerHelper(source, "NameOfExpression", outputLevel);
+            transformerHelper.Process(_transformerOnFactory, "", expectedResult);
+            transformerHelper.Process(_transformerOffFactory, "", source);
+        }
+
+        [Test]
+        public void ProcessWithNameOfExprWithInfoLevel()
+        {
+            const String source = "namespace SomeNamespace\r\n" +
+                                  "{\r\n" +
+                                  "    public class SomeClass\r\n" +
+                                  "    {\r\n" +
+                                  "        public void SomeMethod()\r\n" +
+                                  "        {\r\n" +
+                                  "            string s1 = nameof(SomeMethod);\r\n" +
+                                  "            string s2 = nameof(SomeClass);\r\n" +
+                                  "            string s3 = nameof(SomeNamespace);\r\n" +
+                                  "        }\r\n" +
+                                  "    }\r\n" +
+                                  "}";
+            const String expectedResult = "namespace SomeNamespace\r\n" +
+                                          "{\r\n" +
+                                          "    public class SomeClass\r\n" +
+                                          "    {\r\n" +
+                                          "        public void SomeMethod()\r\n" +
+                                          "        {\r\n" +
+                                          "            string s1 = \"SomeMethod\";\r\n" +
+                                          "            string s2 = \"SomeClass\";\r\n" +
+                                          "            string s3 = \"SomeNamespace\";\r\n" +
+                                          "        }\r\n" +
+                                          "    }\r\n" +
+                                          "}";
+            TransformerHelper transformerHelper = new TransformerHelper(source, "NameOfExpression", OutputLevel.Info);
+            transformerHelper.Process(_transformerOnFactory, ExpectedOutputForInfoLevel, expectedResult);
+            transformerHelper.Process(_transformerOffFactory, "", source);
+        }
+
+        [TestCase(OutputLevel.Error)]
+        [TestCase(OutputLevel.Warning)]
+        public void ProcessWithNameOfMethod(OutputLevel outputLevel)
+        {
+            const String source = "namespace SomeNamespace\r\n" +
+                                  "{\r\n" +
+                                  "    public class SomeClass\r\n" +
+                                  "    {\r\n" +
+                                  "        public void SomeMethod()\r\n" +
+                                  "        {\r\n" +
+                                  "            string s1 = nameof(\"SomeMethod\");\r\n" +
+                                  "            string s2 = nameof(\"SomeClass\");\r\n" +
+                                  "            string s3 = nameof(\"SomeNamespace\");\r\n" +
+                                  "        }\r\n" +
+                                  "        public string nameof(string p)\r\n" +
+                                  "        {\r\n" +
+                                  "            return p;\r\n" +
+                                  "        }\r\n" +
+                                  "    }\r\n" +
+                                  "}";
+            const String expectedResult = "namespace SomeNamespace\r\n" +
+                                          "{\r\n" +
+                                          "    public class SomeClass\r\n" +
+                                          "    {\r\n" +
+                                          "        public void SomeMethod()\r\n" +
+                                          "        {\r\n" +
+                                          "            string s1 = nameof(\"SomeMethod\");\r\n" +
+                                          "            string s2 = nameof(\"SomeClass\");\r\n" +
+                                          "            string s3 = nameof(\"SomeNamespace\");\r\n" +
+                                          "        }\r\n" +
+                                          "        public string nameof(string p)\r\n" +
+                                          "        {\r\n" +
+                                          "            return p;\r\n" +
+                                          "        }\r\n" +
+                                          "    }\r\n" +
+                                          "}";
+            TransformerHelper transformerHelper = new TransformerHelper(source, "NameOfExpression", outputLevel);
+            transformerHelper.Process(_transformerOnFactory, "", expectedResult);
+            transformerHelper.Process(_transformerOffFactory, "", source);
+        }
+
+        [Test]
+        public void ProcessWithNameOfMethodWithInfoLevel()
+        {
+            const String source = "namespace SomeNamespace\r\n" +
+                                  "{\r\n" +
+                                  "    public class SomeClass\r\n" +
+                                  "    {\r\n" +
+                                  "        public void SomeMethod()\r\n" +
+                                  "        {\r\n" +
+                                  "            string s1 = nameof(\"SomeMethod\");\r\n" +
+                                  "            string s2 = nameof(\"SomeClass\");\r\n" +
+                                  "            string s3 = nameof(\"SomeNamespace\");\r\n" +
+                                  "        }\r\n" +
+                                  "        public string nameof(string p)\r\n" +
+                                  "        {\r\n" +
+                                  "            return p;\r\n" +
+                                  "        }\r\n" +
+                                  "    }\r\n" +
+                                  "}";
+            const String expectedResult = "namespace SomeNamespace\r\n" +
+                                          "{\r\n" +
+                                          "    public class SomeClass\r\n" +
+                                          "    {\r\n" +
+                                          "        public void SomeMethod()\r\n" +
+                                          "        {\r\n" +
+                                          "            string s1 = nameof(\"SomeMethod\");\r\n" +
+                                          "            string s2 = nameof(\"SomeClass\");\r\n" +
+                                          "            string s3 = nameof(\"SomeNamespace\");\r\n" +
+                                          "        }\r\n" +
+                                          "        public string nameof(string p)\r\n" +
+                                          "        {\r\n" +
+                                          "            return p;\r\n" +
+                                          "        }\r\n" +
+                                          "    }\r\n" +
+                                          "}";
+            TransformerHelper transformerHelper = new TransformerHelper(source, "NameOfExpression", OutputLevel.Info);
+            transformerHelper.Process(_transformerOnFactory, ExpectedOutputForInfoLevel, expectedResult);
+            transformerHelper.Process(_transformerOffFactory, "", source);
+        }
+
+        [TestCase(OutputLevel.Error)]
+        [TestCase(OutputLevel.Warning)]
+        public void ProcessWithoutNameOfExpr(OutputLevel outputLevel)
+        {
+            const String source = "namespace SomeNamespace\r\n" +
+                                  "{\r\n" +
+                                  "    public class SomeClass\r\n" +
+                                  "    {\r\n" +
+                                  "        public void SomeMethod()\r\n" +
+                                  "        {\r\n" +
+                                  "            string s1 = \"SomeMethod\";\r\n" +
+                                  "            string s2 = \"SomeClass\";\r\n" +
+                                  "            string s3 = \"SomeNamespace\";\r\n" +
+                                  "        }\r\n" +
+                                  "    }\r\n" +
+                                  "}";
+            const String expectedResult = "namespace SomeNamespace\r\n" +
+                                          "{\r\n" +
+                                          "    public class SomeClass\r\n" +
+                                          "    {\r\n" +
+                                          "        public void SomeMethod()\r\n" +
+                                          "        {\r\n" +
+                                          "            string s1 = \"SomeMethod\";\r\n" +
+                                          "            string s2 = \"SomeClass\";\r\n" +
+                                          "            string s3 = \"SomeNamespace\";\r\n" +
+                                          "        }\r\n" +
+                                          "    }\r\n" +
+                                          "}";
+            TransformerHelper transformerHelper = new TransformerHelper(source, "NameOfExpression", outputLevel);
+            transformerHelper.Process(_transformerOnFactory, "", expectedResult);
+            transformerHelper.Process(_transformerOffFactory, "", source);
+        }
+
+        [Test]
+        public void ProcessWithoutNameOfExprWithInfoLevel()
+        {
+            const String source = "namespace SomeNamespace\r\n" +
+                                  "{\r\n" +
+                                  "    public class SomeClass\r\n" +
+                                  "    {\r\n" +
+                                  "        public void SomeMethod()\r\n" +
+                                  "        {\r\n" +
+                                  "            string s1 = \"SomeMethod\";\r\n" +
+                                  "            string s2 = \"SomeClass\";\r\n" +
+                                  "            string s3 = \"SomeNamespace\";\r\n" +
+                                  "        }\r\n" +
+                                  "    }\r\n" +
+                                  "}";
+            const String expectedResult = "namespace SomeNamespace\r\n" +
+                                          "{\r\n" +
+                                          "    public class SomeClass\r\n" +
+                                          "    {\r\n" +
+                                          "        public void SomeMethod()\r\n" +
+                                          "        {\r\n" +
+                                          "            string s1 = \"SomeMethod\";\r\n" +
+                                          "            string s2 = \"SomeClass\";\r\n" +
+                                          "            string s3 = \"SomeNamespace\";\r\n" +
+                                          "        }\r\n" +
+                                          "    }\r\n" +
+                                          "}";
+            TransformerHelper transformerHelper = new TransformerHelper(source, "NameOfExpression", OutputLevel.Info);
+            transformerHelper.Process(_transformerOnFactory, ExpectedOutputForInfoLevel, expectedResult);
+            transformerHelper.Process(_transformerOffFactory, "", source);
+        }
+
+        private readonly Func<IOutput, ITransformer> _transformerOnFactory = output => new NameOfTransformer(output, TransformerState.On);
+        private readonly Func<IOutput, ITransformer> _transformerOffFactory = output => new NameOfTransformer(output, TransformerState.Off);
+
+        private const String ExpectedOutputForInfoLevel = $"Execution of {NameOfTransformer.Name} started\r\n" +
+                                                          $"Execution of {NameOfTransformer.Name} finished\r\n";
+    }
+}

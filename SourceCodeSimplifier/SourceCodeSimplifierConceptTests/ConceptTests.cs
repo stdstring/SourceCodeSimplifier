@@ -72,9 +72,7 @@ namespace SourceCodeSimplifierConceptTests
             if (semanticModel == null)
                 throw new InvalidOperationException();
             NameOfSyntaxRewriter rewriter = new NameOfSyntaxRewriter(semanticModel);
-            SyntaxNode? sourceRoot = sourceDocument.GetSyntaxRootAsync().Result;
-            if (sourceRoot is null)
-                throw new InvalidOperationException();
+            SyntaxNode sourceRoot = syntaxTree.GetRoot();
             SyntaxNode destRoot = rewriter.Visit(sourceRoot);
             Document destDocument = sourceDocument.WithSyntaxRoot(destRoot);
             return destDocument;

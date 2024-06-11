@@ -3,7 +3,6 @@ using Microsoft.CodeAnalysis.MSBuild;
 using SourceCodeSimplifierApp.Output;
 using SourceCodeSimplifierApp.Transformers;
 using SourceCodeSimplifierApp.Utils;
-using System.Diagnostics;
 
 namespace SourceCodeSimplifierApp.Processors
 {
