@@ -11,7 +11,9 @@ namespace SourceCodeSimplifierApp.Transformers
             TransformerState GetTransformerState(String name) => transformersMap.TryGetValue(name, out var state) ? state : TransformerState.Off;
             return new ITransformer[]
             {
-                new EmptyTransformer(output, GetTransformerState(EmptyTransformer.Name))
+                new EmptyTransformer(output, GetTransformerState(EmptyTransformer.Name)),
+                new NameOfTransformer(output, GetTransformerState(NameOfTransformer.Name)),
+                new ObjectInitializerTransformer(output, GetTransformerState(ObjectInitializerTransformer.Name))
             };
         }
     }

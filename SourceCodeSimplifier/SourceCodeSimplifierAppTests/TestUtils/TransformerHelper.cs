@@ -21,7 +21,7 @@ namespace SourceCodeSimplifierAppTests.TestUtils
             using (TextWriter outputWriter = new StringWriter())
             using (TextWriter errorWriter = new StringWriter())
             {
-                OutputImpl output = new OutputImpl(outputWriter, errorWriter, _outputLevel);
+                IOutput output = new OutputImpl(outputWriter, errorWriter, _outputLevel);
                 ITransformer transformer = transformerFactory(output);
                 Document destDocument = transformer.Transform(sourceDocument);
                 String actualOutput = outputWriter.ToString() ?? "";
@@ -33,6 +33,18 @@ namespace SourceCodeSimplifierAppTests.TestUtils
                     Assert.That(actualOutput, Is.EqualTo(expectedOutput));
                     Assert.That(actualError, Is.Empty);
                 });
+            }
+        }
+
+        public void ProcessWithException<TException>(Func<IOutput, ITransformer> transformerFactory) where TException : Exception
+        {
+            Document sourceDocument = PreparationHelper.Prepare(_source, _namePrefix);
+            using (TextWriter outputWriter = new StringWriter())
+            using (TextWriter errorWriter = new StringWriter())
+            {
+                IOutput output = new NullOutput();
+                ITransformer transformer = transformerFactory(output);
+                Assert.Throws<TException>(() => transformer.Transform(sourceDocument));
             }
         }
 

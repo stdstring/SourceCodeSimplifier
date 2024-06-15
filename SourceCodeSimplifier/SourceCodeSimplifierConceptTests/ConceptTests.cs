@@ -131,7 +131,7 @@ namespace SourceCodeSimplifierConceptTests
                         ObjectCreationExpressionSyntax newObjExpression = SyntaxFactory.ObjectCreationExpression(objExpression.Type, newArgs, null);
                         ExpressionSyntax assignmentLeft = assignmentExpression.Left;
                         AssignmentExpressionSyntax newAssignmentExpression = SyntaxFactory.AssignmentExpression(SyntaxKind.SimpleAssignmentExpression,
-                            assignmentExpression.Left,
+                            assignmentLeft,
                             newObjExpression);
                         ExpressionStatementSyntax newExpressionStatement = SyntaxFactory.ExpressionStatement(newAssignmentExpression)
                             .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken))
