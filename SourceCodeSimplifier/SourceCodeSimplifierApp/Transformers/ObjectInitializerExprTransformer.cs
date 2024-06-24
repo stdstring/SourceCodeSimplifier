@@ -8,11 +8,11 @@ using SourceCodeSimplifierApp.Utils;
 
 namespace SourceCodeSimplifierApp.Transformers
 {
-    internal class ObjectInitializerTransformer : ITransformer
+    internal class ObjectInitializerExprTransformer : ITransformer
     {
-        public const String Name = "SourceCodeSimplifierApp.Transformers.ObjectInitializerTransformer";
+        public const String Name = "SourceCodeSimplifierApp.Transformers.ObjectInitializerExprTransformer";
 
-        public ObjectInitializerTransformer(IOutput output, TransformerState transformerState)
+        public ObjectInitializerExprTransformer(IOutput output, TransformerState transformerState)
         {
             _output = output;
             _transformerState = transformerState;

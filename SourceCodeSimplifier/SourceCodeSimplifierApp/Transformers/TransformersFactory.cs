@@ -12,8 +12,8 @@ namespace SourceCodeSimplifierApp.Transformers
             return new ITransformer[]
             {
                 new EmptyTransformer(output, GetTransformerState(EmptyTransformer.Name)),
-                new NameOfTransformer(output, GetTransformerState(NameOfTransformer.Name)),
-                new ObjectInitializerTransformer(output, GetTransformerState(ObjectInitializerTransformer.Name))
+                new NameOfExprTransformer(output, GetTransformerState(NameOfExprTransformer.Name)),
+                new ObjectInitializerExprTransformer(output, GetTransformerState(ObjectInitializerExprTransformer.Name))
             };
         }
     }

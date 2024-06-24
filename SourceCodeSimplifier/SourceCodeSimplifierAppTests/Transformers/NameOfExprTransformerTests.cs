@@ -7,7 +7,7 @@ using SourceCodeSimplifierAppTests.TestUtils;
 namespace SourceCodeSimplifierAppTests.Transformers
 {
     [TestFixture]
-    public class NameOfTransformerTests
+    public class NameOfExprTransformerTests
     {
         [TestCase(OutputLevel.Error)]
         [TestCase(OutputLevel.Warning)]
@@ -220,10 +220,10 @@ namespace SourceCodeSimplifierAppTests.Transformers
             transformerHelper.Process(_transformerOffFactory, "", source);
         }
 
-        private readonly Func<IOutput, ITransformer> _transformerOnFactory = output => new NameOfTransformer(output, TransformerState.On);
-        private readonly Func<IOutput, ITransformer> _transformerOffFactory = output => new NameOfTransformer(output, TransformerState.Off);
+        private readonly Func<IOutput, ITransformer> _transformerOnFactory = output => new NameOfExprTransformer(output, TransformerState.On);
+        private readonly Func<IOutput, ITransformer> _transformerOffFactory = output => new NameOfExprTransformer(output, TransformerState.Off);
 
-        private const String ExpectedOutputForInfoLevel = $"Execution of {NameOfTransformer.Name} started\r\n" +
-                                                          $"Execution of {NameOfTransformer.Name} finished\r\n";
+        private const String ExpectedOutputForInfoLevel = $"Execution of {NameOfExprTransformer.Name} started\r\n" +
+                                                          $"Execution of {NameOfExprTransformer.Name} finished\r\n";
     }
 }

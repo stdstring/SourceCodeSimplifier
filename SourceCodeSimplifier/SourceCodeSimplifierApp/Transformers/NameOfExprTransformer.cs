@@ -6,11 +6,11 @@ using SourceCodeSimplifierApp.Output;
 
 namespace SourceCodeSimplifierApp.Transformers
 {
-    internal class NameOfTransformer : ITransformer
+    internal class NameOfExprTransformer : ITransformer
     {
-        public const String Name = "SourceCodeSimplifierApp.Transformers.NameOfTransformer";
+        public const String Name = "SourceCodeSimplifierApp.Transformers.NameOfExprTransformer";
 
-        public NameOfTransformer(IOutput output, TransformerState transformerState)
+        public NameOfExprTransformer(IOutput output, TransformerState transformerState)
         {
             _output = output;
             _transformerState = transformerState;
@@ -28,7 +28,7 @@ namespace SourceCodeSimplifierApp.Transformers
             SemanticModel? semanticModel = dest.GetSemanticModelAsync().Result;
             if (semanticModel == null)
                 throw new InvalidOperationException("Bad semantic model");
-            NameOfSyntaxRewriter rewriter = new NameOfSyntaxRewriter(semanticModel);
+            NameOfExprSyntaxRewriter rewriter = new NameOfExprSyntaxRewriter(semanticModel);
             SyntaxNode destRoot = rewriter.Visit(syntaxTree.GetRoot());
             dest = dest.WithSyntaxRoot(destRoot);
             _output.WriteInfoLine($"Execution of {Name} finished");
@@ -38,9 +38,9 @@ namespace SourceCodeSimplifierApp.Transformers
         private readonly IOutput _output;
         private readonly TransformerState _transformerState;
 
-        private class NameOfSyntaxRewriter : CSharpSyntaxRewriter
+        private class NameOfExprSyntaxRewriter : CSharpSyntaxRewriter
         {
-            public NameOfSyntaxRewriter(SemanticModel model)
+            public NameOfExprSyntaxRewriter(SemanticModel model)
             {
                 _model = model;
             }
