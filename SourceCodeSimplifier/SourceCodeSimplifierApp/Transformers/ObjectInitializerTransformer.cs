@@ -45,6 +45,7 @@ namespace SourceCodeSimplifierApp.Transformers
 
         private void ProcessInitializerExpression(DocumentEditor documentEditor, ObjectCreationExpressionSyntax objectCreationExpr)
         {
+            FileLinePositionSpan location = objectCreationExpr.SyntaxTree.GetLineSpan(objectCreationExpr.Span);
             switch (objectCreationExpr.Initializer)
             {
                 case null:
@@ -54,7 +55,7 @@ namespace SourceCodeSimplifierApp.Transformers
                     switch (objectCreationExpr.Parent)
                     {
                         case null:
-                            throw new InvalidOperationException("Bad object creation expression: parent is null");
+                            throw new InvalidOperationException($"Bad object creation expression: parent is null (location is {location})");
                         case InitializerExpressionSyntax:
                         case AssignmentExpressionSyntax {Parent: InitializerExpressionSyntax}:
                             break;
@@ -65,7 +66,8 @@ namespace SourceCodeSimplifierApp.Transformers
                             ProcessEqualsValueClause(documentEditor, objectCreationExpr, equalsValueClause);
                             break;
                         default:
-                            throw new InvalidOperationException($"Unsupported kind of parent of object creation expression: {objectCreationExpr.Parent.Kind()}");
+                            String message = $"Unsupported kind of parent of object creation expression: {objectCreationExpr.Parent.Kind()} (location is {location})";
+                            throw new InvalidOperationException(message);
                     }
                     return;
                 }
@@ -79,35 +81,49 @@ namespace SourceCodeSimplifierApp.Transformers
                                                  ObjectCreationExpressionSyntax objectCreationExpr,
                                                  AssignmentExpressionSyntax assignmentExpr)
         {
+            FileLinePositionSpan location = assignmentExpr.SyntaxTree.GetLineSpan(assignmentExpr.Span);
             switch (assignmentExpr.Parent)
             {
                 case ExpressionStatementSyntax expressionStatement:
-                    SyntaxTrivia leadingTrivia = TriviaHelper.GetLeadingSpaceTrivia(expressionStatement);
-                    SyntaxTrivia trailingTrivia = TriviaHelper.GetTrailingEndOfLineTrivia(expressionStatement);
-                    ArgumentListSyntax argList = objectCreationExpr.ArgumentList ?? SyntaxFactory.ArgumentList();
+                    SyntaxTrivia leadingSpaceTrivia = TriviaHelper.GetLeadingSpaceTrivia(expressionStatement);
+                    SyntaxTrivia eolTrivia = TriviaHelper.GetTrailingEndOfLineTrivia(expressionStatement);
+                    SyntaxTriviaList leadingTrivia = PrepareLeadingTrivia(assignmentExpr.GetLeadingTrivia(), leadingSpaceTrivia, eolTrivia);
+                    SyntaxTriviaList trailingTrivia = PrepareTrailingTriviaForObjectCreation(objectCreationExpr, eolTrivia);
+                    ArgumentListSyntax argList = SyntaxFactory.ArgumentList(objectCreationExpr.ArgumentList?.Arguments ?? new SeparatedSyntaxList<ArgumentSyntax>());
                     ObjectCreationExpressionSyntax newObjectCreationExpr = SyntaxFactory.ObjectCreationExpression(objectCreationExpr.Type, argList, null);
                     ExpressionSyntax assignmentExprLeft = assignmentExpr.Left;
-                    AssignmentExpressionSyntax newAssignmentExpr = SyntaxFactory.AssignmentExpression(SyntaxKind.SimpleAssignmentExpression,
-                        assignmentExprLeft,
-                        newObjectCreationExpr);
-                    ExpressionStatementSyntax newExprStatement = SyntaxFactory.ExpressionStatement(newAssignmentExpr)
-                        .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken))
-                        .NormalizeWhitespace()
-                        .WithLeadingTrivia(leadingTrivia)
-                        .WithTrailingTrivia(trailingTrivia);
-                    IList<StatementSyntax> newStatements = new List<StatementSyntax>{newExprStatement};
-                    CollectObjectInitializerExpressions(assignmentExprLeft, objectCreationExpr.Initializer!, leadingTrivia, trailingTrivia, newStatements);
+                    IList<StatementSyntax> newStatements = new List<StatementSyntax>();
+                    ProcessAssignmentExpression(assignmentExprLeft, newObjectCreationExpr, leadingTrivia, trailingTrivia, newStatements);
+                    CollectObjectInitializerExpressions(assignmentExprLeft, objectCreationExpr.Initializer!, leadingSpaceTrivia, eolTrivia, newStatements);
                     documentEditor.ReplaceStatement(expressionStatement, newStatements);
                     break;
                 default:
-                    throw new InvalidOperationException("Unexpected parent for assignment expression");
+                    throw new InvalidOperationException($"Unexpected parent for assignment expression (location is {location})");
             }
+        }
+
+        private void ProcessAssignmentExpression(ExpressionSyntax assignmentLeftPart,
+                                                 ExpressionSyntax assignmentRightPart,
+                                                 SyntaxTriviaList leadingTrivia,
+                                                 SyntaxTriviaList trailingTrivia,
+                                                 IList<StatementSyntax> statementDest)
+        {
+            AssignmentExpressionSyntax newAssignmentExpr = SyntaxFactory.AssignmentExpression(SyntaxKind.SimpleAssignmentExpression,
+                assignmentLeftPart,
+                assignmentRightPart);
+            ExpressionStatementSyntax newExprStatement = SyntaxFactory.ExpressionStatement(newAssignmentExpr)
+                .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken))
+                .NormalizeWhitespace()
+                .WithLeadingTrivia(leadingTrivia)
+                .WithTrailingTrivia(trailingTrivia);
+            statementDest.Add(newExprStatement);
         }
 
         private void ProcessEqualsValueClause(DocumentEditor documentEditor,
                                               ObjectCreationExpressionSyntax objectCreationExpr,
                                               EqualsValueClauseSyntax equalsValueClause)
         {
+            FileLinePositionSpan location = equalsValueClause.SyntaxTree.GetLineSpan(equalsValueClause.Span);
             switch (equalsValueClause.Parent)
             {
                 case VariableDeclaratorSyntax {Parent: VariableDeclarationSyntax {Parent: LocalDeclarationStatementSyntax localDeclarationStatement}}:
@@ -117,9 +133,11 @@ namespace SourceCodeSimplifierApp.Transformers
                     VariableDeclaratorSyntax variableDeclarator = variableDeclaration.Variables.First();
                     SyntaxToken identifier = variableDeclarator.Identifier;
                     IdentifierNameSyntax identifierName = SyntaxFactory.IdentifierName(identifier);
-                    SyntaxTrivia leadingTrivia = TriviaHelper.GetLeadingSpaceTrivia(localDeclarationStatement);
-                    SyntaxTrivia trailingTrivia = TriviaHelper.GetTrailingEndOfLineTrivia(localDeclarationStatement);
-                    ArgumentListSyntax argList = objectCreationExpr.ArgumentList ?? SyntaxFactory.ArgumentList();
+                    SyntaxTrivia leadingSpaceTrivia = TriviaHelper.GetLeadingSpaceTrivia(localDeclarationStatement);
+                    SyntaxTrivia eolTrivia = TriviaHelper.GetTrailingEndOfLineTrivia(localDeclarationStatement);
+                    SyntaxTriviaList leadingTrivia = PrepareLeadingTrivia(variableDeclaration.GetLeadingTrivia(), leadingSpaceTrivia, eolTrivia);
+                    SyntaxTriviaList trailingTrivia = PrepareTrailingTriviaForObjectCreation(objectCreationExpr, eolTrivia);
+                    ArgumentListSyntax argList = SyntaxFactory.ArgumentList(objectCreationExpr.ArgumentList?.Arguments ?? new SeparatedSyntaxList<ArgumentSyntax>());
                     ObjectCreationExpressionSyntax newObjectCreationExpr = SyntaxFactory.ObjectCreationExpression(objectCreationExpr.Type, argList, null);
                     EqualsValueClauseSyntax newEqualsValueClause = SyntaxFactory.EqualsValueClause(newObjectCreationExpr);
                     VariableDeclaratorSyntax newVariableDeclarator = SyntaxFactory.VariableDeclarator(identifier, null, newEqualsValueClause);
@@ -131,56 +149,79 @@ namespace SourceCodeSimplifierApp.Transformers
                         .WithLeadingTrivia(leadingTrivia)
                         .WithTrailingTrivia(trailingTrivia);
                     IList<StatementSyntax> newStatements = new List<StatementSyntax>{newLocalDeclarationStatement};
-                    CollectObjectInitializerExpressions(identifierName, objectCreationExpr.Initializer!, leadingTrivia, trailingTrivia, newStatements);
+                    CollectObjectInitializerExpressions(identifierName, objectCreationExpr.Initializer!, leadingSpaceTrivia, eolTrivia, newStatements);
                     documentEditor.ReplaceStatement(localDeclarationStatement, newStatements);
                     break;
                 default:
-                    throw new InvalidOperationException("Unexpected parent for equal value clause");
+                    throw new InvalidOperationException($"Unexpected parent for equal value clause (location is {location})");
             }
         }
 
         private void CollectObjectInitializerExpressions(ExpressionSyntax baseLeftAssignment,
                                                          InitializerExpressionSyntax initializerExpression,
-                                                         SyntaxTrivia leadingTrivia,
-                                                         SyntaxTrivia trailingTrivia,
+                                                         SyntaxTrivia leadingSpaceTrivia,
+                                                         SyntaxTrivia eolTrivia,
                                                          IList<StatementSyntax> newStatements)
         {
             foreach (ExpressionSyntax expression in initializerExpression.Expressions)
             {
+                FileLinePositionSpan location = expression.SyntaxTree.GetLineSpan(expression.Span);
+                SyntaxTriviaList leadingTrivia = PrepareLeadingTrivia(expression.GetLeadingTrivia(), leadingSpaceTrivia, eolTrivia);
                 switch (expression)
                 {
-                    case AssignmentExpressionSyntax {Left: SimpleNameSyntax name, Right: ObjectCreationExpressionSyntax objectCreationExpr}:
+                    case AssignmentExpressionSyntax {Left: SimpleNameSyntax name, Right: ObjectCreationExpressionSyntax objectCreationExpr}
+                        when objectCreationExpr.Initializer.IsKind(SyntaxKind.ObjectInitializerExpression):
                     {
-                        MemberAccessExpressionSyntax leftAssignment = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, baseLeftAssignment, name);
-                        ArgumentListSyntax arguments = objectCreationExpr.ArgumentList ?? SyntaxFactory.ArgumentList();
+                        SyntaxTriviaList trailingTrivia = PrepareTrailingTriviaForObjectCreation(objectCreationExpr, eolTrivia);
+                        SimpleNameSyntax memberName = SyntaxFactory.IdentifierName(name.Identifier.Text);
+                        MemberAccessExpressionSyntax leftAssignment = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, baseLeftAssignment, memberName);
+                        ArgumentListSyntax arguments = SyntaxFactory.ArgumentList(objectCreationExpr.ArgumentList?.Arguments ?? new SeparatedSyntaxList<ArgumentSyntax>());
                         ObjectCreationExpressionSyntax rightAssignment = SyntaxFactory.ObjectCreationExpression(objectCreationExpr.Type, arguments, null);
-                        AssignmentExpressionSyntax resultAssignment = SyntaxFactory.AssignmentExpression(SyntaxKind.SimpleAssignmentExpression, leftAssignment, rightAssignment);
-                        ExpressionStatementSyntax resultStatement = SyntaxFactory.ExpressionStatement(resultAssignment)
-                            .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken))
-                            .NormalizeWhitespace()
-                            .WithLeadingTrivia(leadingTrivia)
-                            .WithTrailingTrivia(trailingTrivia);
-                        newStatements.Add(resultStatement);
+                        ProcessAssignmentExpression(leftAssignment, rightAssignment, leadingTrivia, trailingTrivia, newStatements);
                         if (objectCreationExpr.Initializer != null)
-                            CollectObjectInitializerExpressions(leftAssignment, objectCreationExpr.Initializer, leadingTrivia, trailingTrivia, newStatements);
+                            CollectObjectInitializerExpressions(leftAssignment, objectCreationExpr.Initializer, leadingSpaceTrivia, eolTrivia, newStatements);
                         break;
                     }
-                    case AssignmentExpressionSyntax {Left: SimpleNameSyntax name, Right: var rightAssignment}:
+                    case AssignmentExpressionSyntax {Left: SimpleNameSyntax name, Right: var rightAssignmentExpr}:
                     {
-                        MemberAccessExpressionSyntax leftAssignment = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, baseLeftAssignment, name);
-                        AssignmentExpressionSyntax resultAssignment = SyntaxFactory.AssignmentExpression(SyntaxKind.SimpleAssignmentExpression, leftAssignment, rightAssignment);
-                        ExpressionStatementSyntax resultStatement = SyntaxFactory.ExpressionStatement(resultAssignment)
-                            .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken))
-                            .NormalizeWhitespace()
-                            .WithLeadingTrivia(leadingTrivia)
-                            .WithTrailingTrivia(trailingTrivia);
-                        newStatements.Add(resultStatement);
-                            break;
+                        SyntaxTriviaList trailingTrivia = PrepareTrailingTriviaForInitializerExpr(expression, eolTrivia);
+                        SimpleNameSyntax memberName = SyntaxFactory.IdentifierName(name.Identifier.Text);
+                        MemberAccessExpressionSyntax leftAssignment = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, baseLeftAssignment, memberName);
+                        ExpressionSyntax rightAssignment = rightAssignmentExpr.WithLeadingTrivia().WithTrailingTrivia();
+                        ProcessAssignmentExpression(leftAssignment, rightAssignment, leadingTrivia, trailingTrivia, newStatements);
+                        break;
                     }
                     default:
-                        throw new InvalidOperationException("Unexpected syntax node rather than AssignmentExpressionSyntax");
+                        throw new InvalidOperationException($"Unexpected syntax node rather than AssignmentExpressionSyntax (location is {location})");
                 }
             }
+        }
+
+        private SyntaxTriviaList PrepareLeadingTrivia(SyntaxTriviaList sourceTrivia, SyntaxTrivia leadingSpaceTrivia, SyntaxTrivia eolTrivia)
+        {
+            IList<SyntaxTrivia> comments = TriviaHelper.ConstructSingleLineCommentsTrivia(sourceTrivia, leadingSpaceTrivia, eolTrivia);
+            comments.Add(leadingSpaceTrivia);
+            return new SyntaxTriviaList(comments);
+        }
+
+        private SyntaxTriviaList PrepareTrailingTriviaForObjectCreation(ObjectCreationExpressionSyntax objectCreationExpr, SyntaxTrivia eolTrivia)
+        {
+            SyntaxTriviaList trailingTrivia = objectCreationExpr.ArgumentList?.GetTrailingTrivia() ?? new SyntaxTriviaList();
+            IList<SyntaxTrivia> comments = TriviaHelper.ConstructSingleLineCommentsTrivia(trailingTrivia, 1, eolTrivia);
+            return comments.IsEmpty() ? new SyntaxTriviaList(eolTrivia) : new SyntaxTriviaList(comments);
+        }
+
+        private SyntaxTriviaList PrepareTrailingTriviaForInitializerExpr(ExpressionSyntax expression, SyntaxTrivia eolTrivia)
+        {
+            SyntaxToken lastToken = expression.GetLastToken();
+            SyntaxToken nextToken = lastToken.GetNextToken();
+            SyntaxTriviaList trailingTrivia = nextToken switch
+            {
+                _ when nextToken.IsKind(SyntaxKind.CommaToken) => nextToken.TrailingTrivia,
+                _ => lastToken.TrailingTrivia
+            };
+            IList<SyntaxTrivia> comments = TriviaHelper.ConstructSingleLineCommentsTrivia(trailingTrivia, 1, eolTrivia);
+            return comments.IsEmpty() ? new SyntaxTriviaList(eolTrivia) : new SyntaxTriviaList(comments);
         }
 
         private readonly IOutput _output;

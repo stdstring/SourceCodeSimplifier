@@ -26,5 +26,23 @@ namespace SourceCodeSimplifierApp.Utils
             SyntaxTrivia endOfLineTrivia = node.GetTrailingTrivia().FirstOrDefault(trivia => trivia.IsKind(SyntaxKind.EndOfLineTrivia));
             return endOfLineTrivia.IsKind(SyntaxKind.EndOfLineTrivia) ? endOfLineTrivia : SyntaxFactory.EndOfLine(Environment.NewLine);
         }
+
+        public static IList<SyntaxTrivia> ConstructSingleLineCommentsTrivia(SyntaxTriviaList source, SyntaxTrivia prefixTrivia, SyntaxTrivia eolTrivia)
+        {
+            IList<SyntaxTrivia> destTrivia = new List<SyntaxTrivia>();
+            source.Where(trivia => trivia.IsKind(SyntaxKind.SingleLineCommentTrivia)).ForEach(comment =>
+            {
+                destTrivia.Add(prefixTrivia);
+                destTrivia.Add(comment);
+                destTrivia.Add(eolTrivia);
+            });
+            return destTrivia;
+        }
+
+        public static IList<SyntaxTrivia> ConstructSingleLineCommentsTrivia(SyntaxTriviaList source, Int32 prefixLength, SyntaxTrivia eolTrivia)
+        {
+            SyntaxTrivia prefixTrivia = SyntaxFactory.Whitespace(new String(' ', prefixLength));
+            return ConstructSingleLineCommentsTrivia(source, prefixTrivia, eolTrivia);
+        }
     }
 }

@@ -39,13 +39,9 @@ namespace SourceCodeSimplifierAppTests.TestUtils
         public void ProcessWithException<TException>(Func<IOutput, ITransformer> transformerFactory) where TException : Exception
         {
             Document sourceDocument = PreparationHelper.Prepare(_source, _namePrefix);
-            using (TextWriter outputWriter = new StringWriter())
-            using (TextWriter errorWriter = new StringWriter())
-            {
-                IOutput output = new NullOutput();
-                ITransformer transformer = transformerFactory(output);
-                Assert.Throws<TException>(() => transformer.Transform(sourceDocument));
-            }
+            IOutput output = new NullOutput();
+            ITransformer transformer = transformerFactory(output);
+            Assert.Throws<TException>(() => transformer.Transform(sourceDocument));
         }
 
         private readonly String _source;
