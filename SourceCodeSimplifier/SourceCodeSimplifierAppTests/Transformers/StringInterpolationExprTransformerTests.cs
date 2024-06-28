@@ -7,12 +7,12 @@ using SourceCodeSimplifierAppTests.TestUtils;
 namespace SourceCodeSimplifierAppTests.Transformers
 {
     [TestFixture]
-    public class NameOfExprTransformerTests
+    public class StringInterpolationExprTransformerTests
     {
         [TestCase(OutputLevel.Error)]
         [TestCase(OutputLevel.Warning)]
         [TestCase(OutputLevel.Info)]
-        public void ProcessWithNameOfExpr(OutputLevel outputLevel)
+        public void ProcessWithStringInterpolationExpr(OutputLevel outputLevel)
         {
             const String source = "namespace SomeNamespace\r\n" +
                                   "{\r\n" +
@@ -20,9 +20,9 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                   "    {\r\n" +
                                   "        public void SomeMethod()\r\n" +
                                   "        {\r\n" +
-                                  "            string s1 = nameof(SomeMethod);\r\n" +
-                                  "            string s2 = nameof(SomeClass);\r\n" +
-                                  "            string s3 = nameof(SomeNamespace);\r\n" +
+                                  "            string name = \"Cacodemon\";\r\n" +
+                                  "            System.DateTime date = System.DateTime.Now;\r\n" +
+                                  "            string result = $\"Name = {name,20}, day = {date.DayOfWeek,-15}, date = {date,15:HH:mm}\";\r\n" +
                                   "        }\r\n" +
                                   "    }\r\n" +
                                   "}";
@@ -32,14 +32,14 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                           "    {\r\n" +
                                           "        public void SomeMethod()\r\n" +
                                           "        {\r\n" +
-                                          "            string s1 = \"SomeMethod\";\r\n" +
-                                          "            string s2 = \"SomeClass\";\r\n" +
-                                          "            string s3 = \"SomeNamespace\";\r\n" +
+                                          "            string name = \"Cacodemon\";\r\n" +
+                                          "            System.DateTime date = System.DateTime.Now;\r\n" +
+                                          "            string result = string.Format(\"Name = {0,20}, day = {1,-15}, date = {2,15:HH:mm}\", name, date.DayOfWeek, date);\r\n" +
                                           "        }\r\n" +
                                           "    }\r\n" +
                                           "}";
             String expectedOutput = outputLevel == OutputLevel.Info ? ExpectedOutputForInfoLevel : "";
-            TransformerHelper transformerHelper = new TransformerHelper(source, "NameOfExpression", outputLevel);
+            TransformerHelper transformerHelper = new TransformerHelper(source, "StringInterpolationExpr", outputLevel);
             transformerHelper.Process(_transformerOnFactory, expectedOutput, expectedResult);
             transformerHelper.Process(_transformerOffFactory, "", source);
         }
@@ -47,7 +47,7 @@ namespace SourceCodeSimplifierAppTests.Transformers
         [TestCase(OutputLevel.Error)]
         [TestCase(OutputLevel.Warning)]
         [TestCase(OutputLevel.Info)]
-        public void ProcessWithNameOfMethod(OutputLevel outputLevel)
+        public void ProcessWithVerbatimStringInterpolationExpr(OutputLevel outputLevel)
         {
             const String source = "namespace SomeNamespace\r\n" +
                                   "{\r\n" +
@@ -55,13 +55,9 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                   "    {\r\n" +
                                   "        public void SomeMethod()\r\n" +
                                   "        {\r\n" +
-                                  "            string s1 = nameof(\"SomeMethod\");\r\n" +
-                                  "            string s2 = nameof(\"SomeClass\");\r\n" +
-                                  "            string s3 = nameof(\"SomeNamespace\");\r\n" +
-                                  "        }\r\n" +
-                                  "        public string nameof(string p)\r\n" +
-                                  "        {\r\n" +
-                                  "            return p;\r\n" +
+                                  "            string name = \"Cacodemon\";\r\n" +
+                                  "            System.DateTime date = System.DateTime.Now;\r\n" +
+                                  "            string result = @$\"Name = {name,20}, day = {date.DayOfWeek,-15}, date = {date,15:HH:mm}\";\r\n" +
                                   "        }\r\n" +
                                   "    }\r\n" +
                                   "}";
@@ -71,18 +67,14 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                           "    {\r\n" +
                                           "        public void SomeMethod()\r\n" +
                                           "        {\r\n" +
-                                          "            string s1 = nameof(\"SomeMethod\");\r\n" +
-                                          "            string s2 = nameof(\"SomeClass\");\r\n" +
-                                          "            string s3 = nameof(\"SomeNamespace\");\r\n" +
-                                          "        }\r\n" +
-                                          "        public string nameof(string p)\r\n" +
-                                          "        {\r\n" +
-                                          "            return p;\r\n" +
+                                          "            string name = \"Cacodemon\";\r\n" +
+                                          "            System.DateTime date = System.DateTime.Now;\r\n" +
+                                          "            string result = string.Format(@\"Name = {0,20}, day = {1,-15}, date = {2,15:HH:mm}\", name, date.DayOfWeek, date);\r\n" +
                                           "        }\r\n" +
                                           "    }\r\n" +
                                           "}";
             String expectedOutput = outputLevel == OutputLevel.Info ? ExpectedOutputForInfoLevel : "";
-            TransformerHelper transformerHelper = new TransformerHelper(source, "NameOfExpression", outputLevel);
+            TransformerHelper transformerHelper = new TransformerHelper(source, "StringInterpolationExpr", outputLevel);
             transformerHelper.Process(_transformerOnFactory, expectedOutput, expectedResult);
             transformerHelper.Process(_transformerOffFactory, "", source);
         }
@@ -90,7 +82,7 @@ namespace SourceCodeSimplifierAppTests.Transformers
         [TestCase(OutputLevel.Error)]
         [TestCase(OutputLevel.Warning)]
         [TestCase(OutputLevel.Info)]
-        public void ProcessWithoutNameOfExpr(OutputLevel outputLevel)
+        public void ProcessWithStringFormatCall(OutputLevel outputLevel)
         {
             const String source = "namespace SomeNamespace\r\n" +
                                   "{\r\n" +
@@ -98,34 +90,22 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                   "    {\r\n" +
                                   "        public void SomeMethod()\r\n" +
                                   "        {\r\n" +
-                                  "            string s1 = \"SomeMethod\";\r\n" +
-                                  "            string s2 = \"SomeClass\";\r\n" +
-                                  "            string s3 = \"SomeNamespace\";\r\n" +
+                                  "            string name = \"Cacodemon\";\r\n" +
+                                  "            System.DateTime date = System.DateTime.Now;\r\n" +
+                                  "            string result = string.Format(\"Name = {0,20}, day = {1,-15}, date = {2,15:HH:mm}\", name, date.DayOfWeek, date);\r\n" +
                                   "        }\r\n" +
                                   "    }\r\n" +
                                   "}";
-            const String expectedResult = "namespace SomeNamespace\r\n" +
-                                          "{\r\n" +
-                                          "    public class SomeClass\r\n" +
-                                          "    {\r\n" +
-                                          "        public void SomeMethod()\r\n" +
-                                          "        {\r\n" +
-                                          "            string s1 = \"SomeMethod\";\r\n" +
-                                          "            string s2 = \"SomeClass\";\r\n" +
-                                          "            string s3 = \"SomeNamespace\";\r\n" +
-                                          "        }\r\n" +
-                                          "    }\r\n" +
-                                          "}";
             String expectedOutput = outputLevel == OutputLevel.Info ? ExpectedOutputForInfoLevel : "";
-            TransformerHelper transformerHelper = new TransformerHelper(source, "NameOfExpression", outputLevel);
-            transformerHelper.Process(_transformerOnFactory, expectedOutput, expectedResult);
+            TransformerHelper transformerHelper = new TransformerHelper(source, "StringInterpolationExpr", outputLevel);
+            transformerHelper.Process(_transformerOnFactory, expectedOutput, source);
             transformerHelper.Process(_transformerOffFactory, "", source);
         }
 
-        private readonly Func<IOutput, ITransformer> _transformerOnFactory = output => new NameOfExprTransformer(output, TransformerState.On);
-        private readonly Func<IOutput, ITransformer> _transformerOffFactory = output => new NameOfExprTransformer(output, TransformerState.Off);
+        private readonly Func<IOutput, ITransformer> _transformerOnFactory = output => new StringInterpolationExprTransformer(output, TransformerState.On);
+        private readonly Func<IOutput, ITransformer> _transformerOffFactory = output => new StringInterpolationExprTransformer(output, TransformerState.Off);
 
-        private const String ExpectedOutputForInfoLevel = $"Execution of {NameOfExprTransformer.Name} started\r\n" +
-                                                          $"Execution of {NameOfExprTransformer.Name} finished\r\n";
+        private const String ExpectedOutputForInfoLevel = $"Execution of {StringInterpolationExprTransformer.Name} started\r\n" +
+                                                          $"Execution of {StringInterpolationExprTransformer.Name} finished\r\n";
     }
 }

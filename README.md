@@ -4,15 +4,15 @@ Source code simplification tool intended for converting some specific constructi
 
 ## Phase 0:
 
-1. implementation of core of SourceCodeSimplifier app
-1. implementation of app configuring via config file in XML format
-1. implementation of manage different transformers via config file
+1. implementation of core of SourceCodeSimplifier app **(implemented)**
+1. implementation of app configuring via config file in XML format **(implemented)**
+1. implementation of manage different transformers via config file **(implemented)**
 
 ## Phase 1:
 
-1. implementation of transformer for object initializer expressions
-1. implementation of transformer for **nameof** expressions
-1. implementation of transformer for string interpolation expression
+1. implementation of transformer for object initializer expressions **(implemented)**
+1. implementation of transformer for **nameof** expressions **(implemented)**
+1. implementation of transformer for string interpolation expression **(implemented)**
 1. implementation of transformer for null-conditional operators
 1. implementation of transformer for expression-bodied properties and methods
 1. implementation of transformer for **out** inline variables
