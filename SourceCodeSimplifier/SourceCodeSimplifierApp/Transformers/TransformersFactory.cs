@@ -12,7 +12,10 @@ namespace SourceCodeSimplifierApp.Transformers
             return new ITransformer[]
             {
                 new EmptyTransformer(output, GetTransformerState(EmptyTransformer.Name)),
+                // node based transformers
                 new NameOfExprTransformer(output, GetTransformerState(NameOfExprTransformer.Name)),
+                new StringInterpolationExprTransformer(output, GetTransformerState(StringInterpolationExprTransformer.Name)),
+                // other transformers
                 new ObjectInitializerExprTransformer(output, GetTransformerState(ObjectInitializerExprTransformer.Name))
             };
         }
