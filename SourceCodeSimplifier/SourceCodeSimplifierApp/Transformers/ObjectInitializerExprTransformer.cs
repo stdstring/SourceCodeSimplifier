@@ -2,6 +2,7 @@
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Editing;
+using Microsoft.CodeAnalysis.Formatting;
 using SourceCodeSimplifierApp.Config;
 using SourceCodeSimplifierApp.Output;
 using SourceCodeSimplifierApp.Utils;
@@ -90,7 +91,8 @@ namespace SourceCodeSimplifierApp.Transformers
                     SyntaxTriviaList leadingTrivia = PrepareLeadingTrivia(assignmentExpr.GetLeadingTrivia(), leadingSpaceTrivia, eolTrivia);
                     SyntaxTriviaList trailingTrivia = PrepareTrailingTriviaForObjectCreation(objectCreationExpr, eolTrivia);
                     ArgumentListSyntax argList = SyntaxFactory.ArgumentList(objectCreationExpr.ArgumentList?.Arguments ?? new SeparatedSyntaxList<ArgumentSyntax>());
-                    ObjectCreationExpressionSyntax newObjectCreationExpr = SyntaxFactory.ObjectCreationExpression(objectCreationExpr.Type, argList, null);
+                    ObjectCreationExpressionSyntax newObjectCreationExpr = SyntaxFactory.ObjectCreationExpression(objectCreationExpr.Type, argList, null)
+                        .NormalizeWhitespace();
                     ExpressionSyntax assignmentExprLeft = assignmentExpr.Left;
                     IList<StatementSyntax> newStatements = new List<StatementSyntax>();
                     ProcessAssignmentExpression(assignmentExprLeft, newObjectCreationExpr, leadingTrivia, trailingTrivia, newStatements);
@@ -108,15 +110,20 @@ namespace SourceCodeSimplifierApp.Transformers
                                                  SyntaxTriviaList trailingTrivia,
                                                  IList<StatementSyntax> statementDest)
         {
-            AssignmentExpressionSyntax newAssignmentExpr = SyntaxFactory.AssignmentExpression(SyntaxKind.SimpleAssignmentExpression,
-                assignmentLeftPart,
-                assignmentRightPart);
-            ExpressionStatementSyntax newExprStatement = SyntaxFactory.ExpressionStatement(newAssignmentExpr)
-                .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken))
-                .NormalizeWhitespace()
+            ProcessAssignmentExpression(assignmentLeftPart.ToString(), assignmentRightPart, leadingTrivia, trailingTrivia, statementDest);
+        }
+
+        private void ProcessAssignmentExpression(String assignmentLeftPart,
+                                                 ExpressionSyntax assignmentRightPart,
+                                                 SyntaxTriviaList leadingTrivia,
+                                                 SyntaxTriviaList trailingTrivia,
+                                                 IList<StatementSyntax> statementDest)
+        {
+            StatementSyntax statement = SyntaxFactory.ParseStatement($"{assignmentLeftPart} = {assignmentRightPart};")
+                .WithAdditionalAnnotations(Formatter.Annotation)
                 .WithLeadingTrivia(leadingTrivia)
                 .WithTrailingTrivia(trailingTrivia);
-            statementDest.Add(newExprStatement);
+            statementDest.Add(statement);
         }
 
         private void ProcessEqualsValueClause(DocumentEditor documentEditor,
@@ -163,6 +170,7 @@ namespace SourceCodeSimplifierApp.Transformers
                                                          SyntaxTrivia eolTrivia,
                                                          IList<StatementSyntax> newStatements)
         {
+            baseLeftAssignment = baseLeftAssignment.WithLeadingTrivia().WithTrailingTrivia();
             foreach (ExpressionSyntax expression in initializerExpression.Expressions)
             {
                 FileLinePositionSpan location = expression.SyntaxTree.GetLineSpan(expression.Span);
@@ -176,19 +184,24 @@ namespace SourceCodeSimplifierApp.Transformers
                         SimpleNameSyntax memberName = SyntaxFactory.IdentifierName(name.Identifier.Text);
                         MemberAccessExpressionSyntax leftAssignment = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, baseLeftAssignment, memberName);
                         ArgumentListSyntax arguments = SyntaxFactory.ArgumentList(objectCreationExpr.ArgumentList?.Arguments ?? new SeparatedSyntaxList<ArgumentSyntax>());
-                        ObjectCreationExpressionSyntax rightAssignment = SyntaxFactory.ObjectCreationExpression(objectCreationExpr.Type, arguments, null);
+                        ObjectCreationExpressionSyntax rightAssignment = SyntaxFactory.ObjectCreationExpression(objectCreationExpr.Type, arguments, null)
+                            .NormalizeWhitespace();
                         ProcessAssignmentExpression(leftAssignment, rightAssignment, leadingTrivia, trailingTrivia, newStatements);
                         if (objectCreationExpr.Initializer != null)
                             CollectObjectInitializerExpressions(leftAssignment, objectCreationExpr.Initializer, leadingSpaceTrivia, eolTrivia, newStatements);
                         break;
                     }
+                    case AssignmentExpressionSyntax {Left: SimpleNameSyntax name, Right: InitializerExpressionSyntax innerInitializerExpression}:
+                    {
+                        SimpleNameSyntax memberName = SyntaxFactory.IdentifierName(name.Identifier.Text);
+                        MemberAccessExpressionSyntax leftAssignment = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, baseLeftAssignment, memberName);
+                        CollectObjectInitializerExpressions(leftAssignment, innerInitializerExpression, leadingSpaceTrivia, eolTrivia, newStatements);
+                        break;
+                    }
                     case AssignmentExpressionSyntax {Left: SimpleNameSyntax name, Right: var rightAssignmentExpr}:
                     {
                         SyntaxTriviaList trailingTrivia = PrepareTrailingTriviaForInitializerExpr(expression, eolTrivia);
-                        SimpleNameSyntax memberName = SyntaxFactory.IdentifierName(name.Identifier.Text);
-                        MemberAccessExpressionSyntax leftAssignment = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, baseLeftAssignment, memberName);
-                        ExpressionSyntax rightAssignment = rightAssignmentExpr.WithLeadingTrivia().WithTrailingTrivia();
-                        ProcessAssignmentExpression(leftAssignment, rightAssignment, leadingTrivia, trailingTrivia, newStatements);
+                        ProcessAssignmentExpression($"{baseLeftAssignment}.{name}", rightAssignmentExpr, leadingTrivia, trailingTrivia, newStatements);
                         break;
                     }
                     default:

@@ -482,7 +482,6 @@ namespace SourceCodeSimplifierAppTests.Transformers
             transformerHelper.Process(_transformerOffFactory, "", source);
         }
 
-        // TODO (std_string) : investigate bad indentation in collection initializers
         [TestCase(OutputLevel.Error)]
         [TestCase(OutputLevel.Warning)]
         [TestCase(OutputLevel.Info)]
@@ -528,37 +527,73 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                           "        {\r\n" +
                                           "            SomeData data = new SomeData(666);\r\n" +
                                           "            data.Field1 = 999;\r\n" +
-                                          "            data.Field2 = new int[]\r\n" +
-                                          "{\r\n" +
-                                          "    1,\r\n" +
-                                          "    2,\r\n" +
-                                          "    3,\r\n" +
-                                          "    4,\r\n" +
-                                          "    5\r\n" +
-                                          "};\r\n" +
-                                          "            data.Field3 = new List<int>()\r\n" +
-                                          "{\r\n" +
-                                          "    1,\r\n" +
-                                          "    2,\r\n" +
-                                          "    3,\r\n" +
-                                          "    4,\r\n" +
-                                          "    5\r\n" +
-                                          "};\r\n" +
-                                          "            data.Field4 = new Dictionary<int, string>()\r\n" +
-                                          "{\r\n" +
-                                          "    {\r\n" +
-                                          "        1,\r\n" +
-                                          "        \"IDDQD\"\r\n" +
-                                          "    },\r\n" +
-                                          "    {\r\n" +
-                                          "        2,\r\n" +
-                                          "        \"IDKFA\"\r\n" +
-                                          "    },\r\n" +
-                                          "    {\r\n" +
-                                          "        3,\r\n" +
-                                          "        \"IDCLIP\"\r\n" +
+                                          "            data.Field2 = new int[]{1, 2, 3, 4, 5};\r\n" +
+                                          "            data.Field3 = new List<int>(){1, 2, 3, 4, 5};\r\n" +
+                                          "            data.Field4 = new Dictionary<int, string>(){{1, \"IDDQD\"}, {2, \"IDKFA\"}, {3, \"IDCLIP\"}};\r\n" +
+                                          "        }\r\n" +
                                           "    }\r\n" +
-                                          "};\r\n" +
+                                          "}";
+            String expectedOutput = outputLevel == OutputLevel.Info ? ExpectedOutputForInfoLevel : "";
+            TransformerHelper transformerHelper = new TransformerHelper(source, "ObjectInitializerExpression", outputLevel);
+            transformerHelper.Process(_transformerOnFactory, expectedOutput, expectedResult);
+            transformerHelper.Process(_transformerOffFactory, "", source);
+        }
+
+        [TestCase(OutputLevel.Error)]
+        [TestCase(OutputLevel.Warning)]
+        [TestCase(OutputLevel.Info)]
+        public void ProcessWithPropertyInitializerExpressions(OutputLevel outputLevel)
+        {
+            const String commonDefinitions = "    public class SomeInnerData\r\n" +
+                                             "    {\r\n" +
+                                             "        public SomeInnerData(int innerField1, string innerField2)\r\n" +
+                                             "        {\r\n" +
+                                             "            InnerField1 = innerField1;\r\n" +
+                                             "            InnerField2 = innerField2;\r\n" +
+                                             "        }\r\n" +
+                                             "        public int InnerField1;\r\n" +
+                                             "        public string InnerField2;\r\n" +
+                                             "    }\r\n" +
+                                             "    public class SomeOuterData\r\n" +
+                                             "    {\r\n" +
+                                             "        public SomeOuterData(int outerField1)\r\n" +
+                                             "        {\r\n" +
+                                             "            OuterField1 = outerField1;\r\n" +
+                                             "            InnerData = new SomeInnerData(19, \"IDKFA\");\r\n" +
+                                             "         }\r\n" +
+                                             "        public int OuterField1;\r\n" +
+                                             "        public SomeInnerData InnerData { get; }\r\n" +
+                                             "    }\r\n";
+            const String source = "namespace SomeNamespace\r\n" +
+                                  "{\r\n" +
+                                  commonDefinitions +
+                                  "    public class SomeClass\r\n" +
+                                  "    {\r\n" +
+                                  "        public void SomeMethod()\r\n" +
+                                  "        {\r\n" +
+                                  "            SomeOuterData outerData = new SomeOuterData(13)\r\n" +
+                                  "            {\r\n" +
+                                  "                OuterField1 = 777,\r\n" +
+                                  "                InnerData =\r\n" +
+                                  "                {\r\n" +
+                                  "                    InnerField1 = 666,\r\n" +
+                                  "                    InnerField2 = \"IDDQD\"\r\n" +
+                                  "                }\r\n" +
+                                  "            };\r\n" +
+                                  "        }\r\n" +
+                                  "    }\r\n" +
+                                  "}";
+            const String expectedResult = "namespace SomeNamespace\r\n" +
+                                          "{\r\n" +
+                                          commonDefinitions +
+                                          "    public class SomeClass\r\n" +
+                                          "    {\r\n" +
+                                          "        public void SomeMethod()\r\n" +
+                                          "        {\r\n" +
+                                          "            SomeOuterData outerData = new SomeOuterData(13);\r\n" +
+                                          "            outerData.OuterField1 = 777;\r\n" +
+                                          "            outerData.InnerData.InnerField1 = 666;\r\n" +
+                                          "            outerData.InnerData.InnerField2 = \"IDDQD\";\r\n" +
                                           "        }\r\n" +
                                           "    }\r\n" +
                                           "}";
