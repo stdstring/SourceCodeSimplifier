@@ -493,13 +493,13 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                              "        {\r\n" +
                                              "            Field1 = field1;\r\n" +
                                              "            Field2 = new int[0];\r\n" +
-                                             "            Field3 = new List<int>();\r\n" +
-                                             "            Field4 = new Dictionary<int, string>();\r\n" +
+                                             "            Field3 = new System.Collections.Generic.List<int>();\r\n" +
+                                             "            Field4 = new System.Collections.Generic.Dictionary<int, string>();\r\n" +
                                              "        }\r\n" +
                                              "        public int Field1;\r\n" +
                                              "        public int[] Field2;\r\n" +
-                                             "        public IList<int> Field3;\r\n" +
-                                             "        public IDictionary<int, string> Field4;\r\n" +
+                                             "        public System.Collections.Generic.IList<int> Field3;\r\n" +
+                                             "        public System.Collections.Generic.IDictionary<int, string> Field4;\r\n" +
                                              "    }\r\n";
             const String source = "namespace SomeNamespace\r\n" +
                                   "{\r\n" +
@@ -512,8 +512,8 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                   "            {\r\n" +
                                   "                Field1 = 999,\r\n" +
                                   "                Field2 = new int[]{1, 2, 3, 4, 5},\r\n" +
-                                  "                Field3 = new List<int>(){1, 2, 3, 4, 5},\r\n" +
-                                  "                Field4 = new Dictionary<int, string>(){{1, \"IDDQD\"}, {2, \"IDKFA\"}, {3, \"IDCLIP\"}}\r\n" +
+                                  "                Field3 = new System.Collections.Generic.List<int>(){1, 2, 3, 4, 5},\r\n" +
+                                  "                Field4 = new System.Collections.Generic.Dictionary<int, string>(){{1, \"IDDQD\"}, {2, \"IDKFA\"}, {3, \"IDCLIP\"}}\r\n" +
                                   "            };\r\n" +
                                   "        }\r\n" +
                                   "    }\r\n" +
@@ -528,8 +528,8 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                           "            SomeData data = new SomeData(666);\r\n" +
                                           "            data.Field1 = 999;\r\n" +
                                           "            data.Field2 = new int[]{1, 2, 3, 4, 5};\r\n" +
-                                          "            data.Field3 = new List<int>(){1, 2, 3, 4, 5};\r\n" +
-                                          "            data.Field4 = new Dictionary<int, string>(){{1, \"IDDQD\"}, {2, \"IDKFA\"}, {3, \"IDCLIP\"}};\r\n" +
+                                          "            data.Field3 = new System.Collections.Generic.List<int>(){1, 2, 3, 4, 5};\r\n" +
+                                          "            data.Field4 = new System.Collections.Generic.Dictionary<int, string>(){{1, \"IDDQD\"}, {2, \"IDKFA\"}, {3, \"IDCLIP\"}};\r\n" +
                                           "        }\r\n" +
                                           "    }\r\n" +
                                           "}";

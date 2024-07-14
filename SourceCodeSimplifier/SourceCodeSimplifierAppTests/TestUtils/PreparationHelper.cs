@@ -34,6 +34,7 @@ namespace SourceCodeSimplifierAppTests.TestUtils
                 .WithMetadataReferences(new[] {MetadataReference.CreateFromFile(typeof(String).Assembly.Location)})
                 .WithCompilationOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
             Document document = project.AddDocument($"{namePrefix}Document", source);
+            project = document.Project;
             Compilation? compilation = project.GetCompilationAsync().Result;
             Assert.That(compilation, Is.Not.Null);
             CheckCompilationErrors(compilation!);

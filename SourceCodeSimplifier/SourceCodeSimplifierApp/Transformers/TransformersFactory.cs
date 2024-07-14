@@ -16,7 +16,8 @@ namespace SourceCodeSimplifierApp.Transformers
                 new NameOfExprTransformer(output, GetTransformerState(NameOfExprTransformer.Name)),
                 new StringInterpolationExprTransformer(output, GetTransformerState(StringInterpolationExprTransformer.Name)),
                 // other transformers
-                new ObjectInitializerExprTransformer(output, GetTransformerState(ObjectInitializerExprTransformer.Name))
+                new ObjectInitializerExprTransformer(output, GetTransformerState(ObjectInitializerExprTransformer.Name)),
+                new OutInlineVariableTransformer(output, GetTransformerState(OutInlineVariableTransformer.Name))
             };
         }
     }
