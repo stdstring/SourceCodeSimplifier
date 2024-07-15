@@ -108,10 +108,10 @@ namespace SourceCodeSimplifierApp.Transformers
 
         private class OutInlineVariableSyntaxRewriter : CSharpSyntaxRewriter
         {
-            public override SyntaxNode VisitArgument(ArgumentSyntax node)
+            public override SyntaxNode? VisitArgument(ArgumentSyntax node)
             {
                 if (!node.RefKindKeyword.IsKind(SyntaxKind.OutKeyword))
-                    return node;
+                    return base.VisitArgument(node);
                 switch (node.Expression)
                 {
                     case DeclarationExpressionSyntax{Designation: SingleVariableDesignationSyntax singleVariable}:
@@ -124,7 +124,7 @@ namespace SourceCodeSimplifierApp.Transformers
                     case DeclarationExpressionSyntax:
                         throw new NotSupportedException($"Unsupported variable declaration in argument: {node}");
                     default:
-                        return node;
+                        return base.VisitArgument(node);
                 }
             }
         }

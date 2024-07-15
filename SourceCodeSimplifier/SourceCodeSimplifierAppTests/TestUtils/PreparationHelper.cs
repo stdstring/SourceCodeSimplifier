@@ -1,5 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Text;
 using NUnit.Framework;
 
 namespace SourceCodeSimplifierAppTests.TestUtils
@@ -39,6 +40,21 @@ namespace SourceCodeSimplifierAppTests.TestUtils
             Assert.That(compilation, Is.Not.Null);
             CheckCompilationErrors(compilation!);
             return document;
+        }
+
+        public static void CheckCompilationErrors(Document sourceDocument, String namePrefix)
+        {
+            SourceText sourceText = sourceDocument.GetTextAsync().Result;
+            AdhocWorkspace workspace = new AdhocWorkspace();
+            Project project = workspace.AddProject($"{namePrefix}Project", "C#")
+                .WithAssemblyName($"{namePrefix}Assembly")
+                .WithMetadataReferences(new[] { MetadataReference.CreateFromFile(typeof(String).Assembly.Location) })
+                .WithCompilationOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            Document document = project.AddDocument("{namePrefix}Document", sourceText);
+            project = document.Project;
+            Compilation? compilation = project.GetCompilationAsync().Result;
+            Assert.That(compilation, Is.Not.Null);
+            CheckCompilationErrors(compilation!);
         }
     }
 }

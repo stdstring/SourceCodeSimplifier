@@ -100,7 +100,7 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                           "            int otherP2;\r\n" +
                                           "            string otherP3;\r\n" +
                                           "            int anotherP2;\r\n" +
-                                          "            OtherMethod(13, out otherP2, out otherP3, AnotherMethod(999, out int anotherP2, p4));\r\n" +
+                                          "            OtherMethod(13, out otherP2, out otherP3, AnotherMethod(999, out anotherP2, p4));\r\n" +
                                           "        }\r\n" +
                                           "    }\r\n" +
                                           "}";

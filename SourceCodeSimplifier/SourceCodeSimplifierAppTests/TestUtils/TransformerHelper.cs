@@ -12,6 +12,7 @@ namespace SourceCodeSimplifierAppTests.TestUtils
         {
             _source = source;
             _namePrefix = namePrefix;
+            _namePrefixDest = $"{namePrefix}Dest";
             _outputLevel = outputLevel;
         }
 
@@ -24,6 +25,7 @@ namespace SourceCodeSimplifierAppTests.TestUtils
                 IOutput output = new OutputImpl(outputWriter, errorWriter, _outputLevel);
                 ITransformer transformer = transformerFactory(output);
                 Document destDocument = transformer.Transform(sourceDocument);
+                PreparationHelper.CheckCompilationErrors(destDocument, _namePrefixDest);
                 String actualOutput = outputWriter.ToString() ?? "";
                 String actualError = errorWriter.ToString() ?? "";
                 String actualResult = destDocument.GetTextAsync().Result.ToString();
@@ -46,6 +48,7 @@ namespace SourceCodeSimplifierAppTests.TestUtils
 
         private readonly String _source;
         private readonly String _namePrefix;
+        private readonly String _namePrefixDest;
         private readonly OutputLevel _outputLevel;
     }
 }
