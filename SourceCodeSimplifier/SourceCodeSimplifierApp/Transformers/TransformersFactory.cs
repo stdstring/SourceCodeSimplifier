@@ -5,7 +5,7 @@ namespace SourceCodeSimplifierApp.Transformers
 {
     internal static class TransformersFactory
     {
-        public static IList<ITransformer> Create(IOutput output, TransformerEntry[] config)
+        public static ITransformer[] Create(IOutput output, TransformerEntry[] config)
         {
             IDictionary<String, TransformerState> transformersMap = config.ToDictionary(entry => entry.Name!, entry => entry.State);
             TransformerState GetTransformerState(String name) => transformersMap.TryGetValue(name, out var state) ? state : TransformerState.Off;
