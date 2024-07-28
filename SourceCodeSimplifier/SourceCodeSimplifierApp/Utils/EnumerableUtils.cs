@@ -17,5 +17,11 @@
             foreach (TElement element in source)
                 action(element);
         }
+
+        public static void AddRange<TElement>(this ICollection<TElement> dest, IEnumerable<TElement> source)
+        {
+            foreach (TElement element in source)
+                dest.Add(element);
+        }
     }
 }
