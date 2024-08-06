@@ -6,10 +6,15 @@ namespace SourceCodeSimplifierApp.Variables
 {
     internal class VariablesCollector
     {
-        public ISet<String> CollectExistingVariables(StatementSyntax currentStatement)
+        public ISet<String> CollectExistingVariables(SyntaxNode node)
+        {
+            MemberDeclarationSyntax containedMember = node.GetParentMember();
+            return CollectExistingVariables(containedMember);
+        }
+
+        public ISet<String> CollectExistingVariables(MemberDeclarationSyntax containedMember)
         {
             HashSet<String> existingVariables = new HashSet<String>();
-            MemberDeclarationSyntax containedMember = MoveToContainedMember(currentStatement);
             existingVariables.AddRange(GetParameterNames(containedMember));
             IList<String> variableDeclarators = containedMember
                 .DescendantNodes()
@@ -26,18 +31,6 @@ namespace SourceCodeSimplifierApp.Variables
                 .ToList();
             existingVariables.AddRange(declarationExpressions);
             return existingVariables;
-        }
-
-        private MemberDeclarationSyntax MoveToContainedMember(StatementSyntax currentStatement)
-        {
-            SyntaxNode? current = currentStatement;
-            while (current != null)
-            {
-                current = current.Parent;
-                if (current is MemberDeclarationSyntax memberDeclaration)
-                    return memberDeclaration;
-            }
-            throw new InvalidOperationException("Bad statement (without contained member)");
         }
 
         private IList<String> GetParameterNames(MemberDeclarationSyntax containedMember)

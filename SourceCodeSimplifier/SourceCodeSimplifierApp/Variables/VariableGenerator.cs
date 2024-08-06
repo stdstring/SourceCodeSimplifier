@@ -20,7 +20,7 @@
 
         private String Generate(String prefix, Int32 suffix)
         {
-            while (true)
+            for (;;++suffix)
             {
                 String variable = suffix == 0 ? prefix : $"{prefix}{suffix + 1}";
                 if (!_knownVariables.Contains(variable))
@@ -29,7 +29,6 @@
                     _prefixMap[prefix] = suffix;
                     return variable;
                 }
-                ++suffix;
             }
         }
 
