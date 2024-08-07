@@ -44,5 +44,12 @@ namespace SourceCodeSimplifierApp.Utils
             SyntaxTrivia prefixTrivia = SyntaxFactory.Whitespace(new String(' ', prefixLength));
             return ConstructSingleLineCommentsTrivia(source, prefixTrivia, eolTrivia);
         }
+
+        public static SyntaxTriviaList ConstructLeadingTrivia(SyntaxTriviaList sourceTrivia, SyntaxTrivia leadingSpaceTrivia, SyntaxTrivia eolTrivia)
+        {
+            IList<SyntaxTrivia> comments = ConstructSingleLineCommentsTrivia(sourceTrivia, leadingSpaceTrivia, eolTrivia);
+            comments.Add(leadingSpaceTrivia);
+            return new SyntaxTriviaList(comments);
+        }
     }
 }

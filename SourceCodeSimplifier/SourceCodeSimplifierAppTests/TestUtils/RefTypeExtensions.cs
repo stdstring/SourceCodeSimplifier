@@ -2,7 +2,7 @@
 
 namespace SourceCodeSimplifierAppTests.TestUtils
 {
-    internal static class NullableRefExtensions
+    internal static class RefTypeExtensions
     {
         public static T Must<T>(this T? source) where T : class
         {

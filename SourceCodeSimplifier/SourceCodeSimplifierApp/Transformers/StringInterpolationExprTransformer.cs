@@ -28,7 +28,7 @@ namespace SourceCodeSimplifierApp.Transformers
             SyntaxTree? syntaxTree = dest.GetSyntaxTreeAsync().Result;
             if (syntaxTree == null)
                 throw new InvalidOperationException("Bad syntax tree");
-            StringInterpolationExprTSyntaxRewriter rewriter = new StringInterpolationExprTSyntaxRewriter();
+            StringInterpolationExprSyntaxRewriter rewriter = new StringInterpolationExprSyntaxRewriter();
             SyntaxNode destRoot = rewriter.Visit(syntaxTree.GetRoot());
             dest = dest.WithSyntaxRoot(destRoot);
             _output.WriteInfoLine($"Execution of {Name} finished");
@@ -38,9 +38,9 @@ namespace SourceCodeSimplifierApp.Transformers
         private readonly IOutput _output;
         private readonly TransformerState _transformerState;
 
-        private class StringInterpolationExprTSyntaxRewriter : CSharpSyntaxRewriter
+        private class StringInterpolationExprSyntaxRewriter : CSharpSyntaxRewriter
         {
-            public override SyntaxNode? VisitInterpolatedStringExpression(InterpolatedStringExpressionSyntax node)
+            public override SyntaxNode VisitInterpolatedStringExpression(InterpolatedStringExpressionSyntax node)
             {
                 FileLinePositionSpan location = node.SyntaxTree.GetLineSpan(node.Span);
                 Boolean isVerbatimString = node.GetFirstToken().IsKind(SyntaxKind.InterpolatedVerbatimStringStartToken);
