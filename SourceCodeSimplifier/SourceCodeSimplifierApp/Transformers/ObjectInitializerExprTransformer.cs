@@ -33,6 +33,7 @@ namespace SourceCodeSimplifierApp.Transformers
 
         private Document TransformImpl(Document source)
         {
+            String filename = source.FilePath ?? source.Name;
             DocumentEditor documentEditor = DocumentEditor.CreateAsync(source).Result;
             SyntaxNode? sourceRoot = source.GetSyntaxRootAsync().Result;
             if (sourceRoot == null)
@@ -50,7 +51,7 @@ namespace SourceCodeSimplifierApp.Transformers
             {
                 IList<StatementSyntax> beforeStatements = new List<StatementSyntax>();
                 IList<StatementSyntax> afterStatements = new List<StatementSyntax>();
-                ObjectInitializerExprSyntaxRewriter rewriter = new ObjectInitializerExprSyntaxRewriter(model, variableManager, beforeStatements, afterStatements);
+                ObjectInitializerExprSyntaxRewriter rewriter = new ObjectInitializerExprSyntaxRewriter(model, variableManager, beforeStatements, afterStatements, _output, filename);
                 StatementSyntax result = rewriter.Visit(parentStatement).MustCast<SyntaxNode, StatementSyntax>();
                 IList<StatementSyntax> newStatements = new List<StatementSyntax>();
                 newStatements.AddRange(beforeStatements);
@@ -71,16 +72,21 @@ namespace SourceCodeSimplifierApp.Transformers
         public ObjectInitializerExprSyntaxRewriter(SemanticModel model,
                                                    VariableManager variableManager,
                                                    IList<StatementSyntax> beforeStatements,
-                                                   IList<StatementSyntax> afterStatements)
+                                                   IList<StatementSyntax> afterStatements,
+                                                   IOutput output,
+                                                   String filename)
         {
             _model = model;
             _variableManager = variableManager;
             _beforeStatements = beforeStatements;
             _afterStatements = afterStatements;
+            _output = output;
+            _filename = filename;
         }
 
         public override SyntaxNode VisitObjectCreationExpression(ObjectCreationExpressionSyntax node)
         {
+            CheckTrailingTrivia(node);
             SyntaxNode? expression = base.VisitObjectCreationExpression(node);
             switch (expression)
             {
@@ -113,6 +119,17 @@ namespace SourceCodeSimplifierApp.Transformers
                 default:
                     return expression;
             }
+        }
+
+        private void CheckTrailingTrivia(ObjectCreationExpressionSyntax node)
+        {
+            if (node.Initializer == null)
+                return;
+            SyntaxTrivia? trailingTrivia = ObjectInitializerExprTrivia.ExtractTrailingTrivia(node);
+            if (trailingTrivia == null)
+                return;
+            FileLinePositionSpan location = node.SyntaxTree.GetLineSpan(node.Span);
+            _output.WriteWarningLine(_filename, location.StartLinePosition.Line, $"Unprocessed (lost) trailing comment: \"{trailingTrivia}\"");
         }
 
         private SyntaxNode ProcessObjectCreationExpressionInArg(ObjectCreationExpressionSyntax source,
@@ -222,33 +239,33 @@ namespace SourceCodeSimplifierApp.Transformers
                 SyntaxTriviaList leadingTrivia = TriviaHelper.ConstructLeadingTrivia(expression.GetLeadingTrivia(), leadingSpaceTrivia, eolTrivia);
                 switch (expression)
                 {
-                    case AssignmentExpressionSyntax { Left: SimpleNameSyntax name, Right: ObjectCreationExpressionSyntax objectCreationExpr }
+                    case AssignmentExpressionSyntax {Left: SimpleNameSyntax name, Right: ObjectCreationExpressionSyntax objectCreationExpr}
                         when objectCreationExpr.Initializer.IsKind(SyntaxKind.ObjectInitializerExpression):
-                        {
-                            SyntaxTriviaList trailingTrivia = ObjectInitializerExprTrivia.ConstructTrailingTrivia(objectCreationExpr, eolTrivia);
-                            SimpleNameSyntax memberName = SyntaxFactory.IdentifierName(name.Identifier.Text);
-                            MemberAccessExpressionSyntax leftAssignment = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, baseLeftAssignment, memberName);
-                            ArgumentListSyntax arguments = SyntaxFactory.ArgumentList(objectCreationExpr.ArgumentList?.Arguments ?? new SeparatedSyntaxList<ArgumentSyntax>());
-                            ObjectCreationExpressionSyntax rightAssignment = SyntaxFactory.ObjectCreationExpression(objectCreationExpr.Type, arguments, null)
-                                .NormalizeWhitespace();
-                            ProcessAssignmentExpression(leftAssignment, rightAssignment, leadingTrivia, trailingTrivia, newStatements);
-                            if (objectCreationExpr.Initializer != null)
-                                CollectObjectInitializerExpressions(leftAssignment, objectCreationExpr.Initializer, leadingSpaceTrivia, eolTrivia, newStatements);
-                            break;
-                        }
-                    case AssignmentExpressionSyntax { Left: SimpleNameSyntax name, Right: InitializerExpressionSyntax innerInitializerExpression }:
-                        {
-                            SimpleNameSyntax memberName = SyntaxFactory.IdentifierName(name.Identifier.Text);
-                            MemberAccessExpressionSyntax leftAssignment = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, baseLeftAssignment, memberName);
-                            CollectObjectInitializerExpressions(leftAssignment, innerInitializerExpression, leadingSpaceTrivia, eolTrivia, newStatements);
-                            break;
-                        }
-                    case AssignmentExpressionSyntax { Left: SimpleNameSyntax name, Right: var rightAssignmentExpr }:
-                        {
-                            SyntaxTriviaList trailingTrivia = ObjectInitializerExprTrivia.ConstructTrailingTrivia(expression, eolTrivia);
-                            ProcessAssignmentExpression($"{baseLeftAssignment}.{name}", rightAssignmentExpr, leadingTrivia, trailingTrivia, newStatements);
-                            break;
-                        }
+                    {
+                        SyntaxTriviaList trailingTrivia = ObjectInitializerExprTrivia.ConstructTrailingTrivia(objectCreationExpr, eolTrivia);
+                        SimpleNameSyntax memberName = SyntaxFactory.IdentifierName(name.Identifier.Text);
+                        MemberAccessExpressionSyntax leftAssignment = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, baseLeftAssignment, memberName);
+                        ArgumentListSyntax arguments = SyntaxFactory.ArgumentList(objectCreationExpr.ArgumentList?.Arguments ?? new SeparatedSyntaxList<ArgumentSyntax>());
+                        ObjectCreationExpressionSyntax rightAssignment = SyntaxFactory.ObjectCreationExpression(objectCreationExpr.Type, arguments, null)
+                            .NormalizeWhitespace();
+                        ProcessAssignmentExpression(leftAssignment, rightAssignment, leadingTrivia, trailingTrivia, newStatements);
+                        if (objectCreationExpr.Initializer != null)
+                            CollectObjectInitializerExpressions(leftAssignment, objectCreationExpr.Initializer, leadingSpaceTrivia, eolTrivia, newStatements);
+                        break;
+                    }
+                    case AssignmentExpressionSyntax {Left: SimpleNameSyntax name, Right: InitializerExpressionSyntax innerInitializerExpression}:
+                    {
+                        SimpleNameSyntax memberName = SyntaxFactory.IdentifierName(name.Identifier.Text);
+                        MemberAccessExpressionSyntax leftAssignment = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, baseLeftAssignment, memberName);
+                        CollectObjectInitializerExpressions(leftAssignment, innerInitializerExpression, leadingSpaceTrivia, eolTrivia, newStatements);
+                        break;
+                    }
+                    case AssignmentExpressionSyntax {Left: SimpleNameSyntax name, Right: var rightAssignmentExpr}:
+                    {
+                        SyntaxTriviaList trailingTrivia = ObjectInitializerExprTrivia.ConstructTrailingTrivia(expression, eolTrivia);
+                        ProcessAssignmentExpression($"{baseLeftAssignment}.{name}", rightAssignmentExpr, leadingTrivia, trailingTrivia, newStatements);
+                        break;
+                    }
                     default:
                         throw new InvalidOperationException($"Unexpected syntax node rather than AssignmentExpressionSyntax (location is {location})");
                 }
@@ -281,10 +298,23 @@ namespace SourceCodeSimplifierApp.Transformers
         private readonly IList<StatementSyntax> _beforeStatements;
         private readonly IList<StatementSyntax> _afterStatements;
         private readonly VariableManager _variableManager;
+        private readonly IOutput _output;
+        private readonly String _filename;
     }
 
     internal static class ObjectInitializerExprTrivia
     {
+        public static SyntaxTrivia? ExtractTrailingTrivia(ObjectCreationExpressionSyntax objectCreationExpr)
+        {
+            SyntaxTriviaList trailingTrivia = objectCreationExpr.ArgumentList?.GetTrailingTrivia() ?? new SyntaxTriviaList();
+            return trailingTrivia.Where(trivia => trivia.IsKind(SyntaxKind.SingleLineCommentTrivia)).ToArray() switch
+            {
+                [] => null,
+                [var commentTrivia] => commentTrivia,
+                _ => throw new InvalidOperationException("Bad (several) trailing trivia")
+            };
+        }
+
         public static SyntaxTriviaList ConstructTrailingTrivia(ObjectCreationExpressionSyntax objectCreationExpr, SyntaxTrivia eolTrivia)
         {
             SyntaxTriviaList trailingTrivia = objectCreationExpr.ArgumentList?.GetTrailingTrivia() ?? new SyntaxTriviaList();

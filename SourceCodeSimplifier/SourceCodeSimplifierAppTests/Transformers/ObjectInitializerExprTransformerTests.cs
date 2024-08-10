@@ -349,7 +349,19 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                           "        }\r\n" +
                                           "    }\r\n" +
                                           "}";
-            String expectedOutput = outputLevel == OutputLevel.Info ? ExpectedOutputForInfoLevel : "";
+            const String expectedWarning = "ObjectInitializerExpressionDocument(31): [WARNING]: Unprocessed (lost) trailing comment: \"// SomeOuterData ctor Footer comment 1\"\r\n" +
+                                           "ObjectInitializerExpressionDocument(41): [WARNING]: Unprocessed (lost) trailing comment: \"// SomeInnerData ctor Footer comment 1\"\r\n" +
+                                           "ObjectInitializerExpressionDocument(55): [WARNING]: Unprocessed (lost) trailing comment: \"// SomeOuterData ctor Footer comment 11\"\r\n" +
+                                           "ObjectInitializerExpressionDocument(65): [WARNING]: Unprocessed (lost) trailing comment: \"// SomeInnerData ctor Footer comment 11\"\r\n" +
+                                           "ObjectInitializerExpressionDocument(79): [WARNING]: Unprocessed (lost) trailing comment: \"// SomeOuterData ctor Footer comment 21\"\r\n" +
+                                           "ObjectInitializerExpressionDocument(89): [WARNING]: Unprocessed (lost) trailing comment: \"// SomeInnerData ctor Footer comment 21\"\r\n";
+            String expectedOutput = outputLevel switch
+            {
+                OutputLevel.Error => "",
+                OutputLevel.Warning => expectedWarning,
+                OutputLevel.Info => String.Format(ExpectedOutputForInfoLevelTemplate, expectedWarning),
+                _ => throw new InvalidOperationException($"Unexpected OutputLevel: {outputLevel}")
+            };
             TransformerHelper transformerHelper = new TransformerHelper(source, "ObjectInitializerExpression", outputLevel);
             transformerHelper.Process(_transformerOnFactory, expectedOutput, expectedResult);
             transformerHelper.Process(_transformerOffFactory, "", source);
@@ -939,5 +951,8 @@ namespace SourceCodeSimplifierAppTests.Transformers
 
         private const String ExpectedOutputForInfoLevel = $"Execution of {ObjectInitializerExprTransformer.Name} started\r\n" +
                                                           $"Execution of {ObjectInitializerExprTransformer.Name} finished\r\n";
+        private const String ExpectedOutputForInfoLevelTemplate = $"Execution of {ObjectInitializerExprTransformer.Name} started\r\n" +
+                                                                  "{0}" +
+                                                                  $"Execution of {ObjectInitializerExprTransformer.Name} finished\r\n";
     }
 }
