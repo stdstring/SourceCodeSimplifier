@@ -20,9 +20,8 @@ namespace SourceCodeSimplifierApp.Transformers.ObjectInitializerExpr
 
         public static SyntaxTriviaList ConstructTrailingTrivia(ObjectCreationExpressionSyntax objectCreationExpr, SyntaxTrivia eolTrivia)
         {
-            SyntaxTriviaList trailingTrivia = objectCreationExpr.ArgumentList?.GetTrailingTrivia() ?? new SyntaxTriviaList();
-            IList<SyntaxTrivia> comments = TriviaHelper.ConstructSingleLineCommentsTrivia(trailingTrivia, 1, eolTrivia);
-            return comments.IsEmpty() ? new SyntaxTriviaList(eolTrivia) : new SyntaxTriviaList(comments);
+            ArgumentListSyntax arguments = objectCreationExpr.ArgumentList ?? SyntaxFactory.ArgumentList();
+            return TriviaHelper.ConstructTrailingTrivia(arguments, eolTrivia);
         }
 
         public static SyntaxTriviaList ConstructTrailingTrivia(ExpressionSyntax expression, SyntaxTrivia eolTrivia)

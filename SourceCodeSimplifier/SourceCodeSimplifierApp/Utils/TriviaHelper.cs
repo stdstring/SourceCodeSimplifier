@@ -1,5 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace SourceCodeSimplifierApp.Utils
 {
@@ -7,18 +8,21 @@ namespace SourceCodeSimplifierApp.Utils
     {
         public static SyntaxTrivia GetLeadingSpaceTrivia(SyntaxNode node)
         {
-            IReadOnlyList<SyntaxTrivia> leadingTrivia = node.GetLeadingTrivia();
-            int lastEndOfLineIndex = leadingTrivia.Count - 1;
-            while (lastEndOfLineIndex >= 0)
-            {
-                if (leadingTrivia[lastEndOfLineIndex].IsKind(SyntaxKind.EndOfLineTrivia))
-                    break;
-                --lastEndOfLineIndex;
-            }
-            int totalSpaceSize = 0;
-            for (int index = lastEndOfLineIndex + 1; index < leadingTrivia.Count; ++index)
-                totalSpaceSize += leadingTrivia[index].Span.Length;
-            return SyntaxFactory.Whitespace(new string(' ', totalSpaceSize));
+            return SyntaxFactory.Whitespace(new String(' ', CalcLeadingSpaceTriviaSize(node)));
+        }
+
+        public static Int32 CalcLeadingSpaceDelta(StatementSyntax statement)
+        {
+            Int32 currentSize = CalcLeadingSpaceTriviaSize(statement);
+            Int32 parentSize = CalcLeadingSpaceTriviaSize(statement.Parent.Must());
+            return currentSize - parentSize;
+        }
+
+        public static SyntaxTrivia ShiftRightLeadingSpaceTrivia(SyntaxTrivia sourceTrivia, Int32 delta)
+        {
+            if (!sourceTrivia.IsKind(SyntaxKind.WhitespaceTrivia))
+                throw new NotImplementedException($"Bad kind of trivia: {sourceTrivia.Kind()}");
+            return SyntaxFactory.Whitespace(new String(' ', sourceTrivia.Span.Length + delta));
         }
 
         public static SyntaxTrivia GetTrailingEndOfLineTrivia(SyntaxNode node)
@@ -50,6 +54,35 @@ namespace SourceCodeSimplifierApp.Utils
             IList<SyntaxTrivia> comments = ConstructSingleLineCommentsTrivia(sourceTrivia, leadingSpaceTrivia, eolTrivia);
             comments.Add(leadingSpaceTrivia);
             return new SyntaxTriviaList(comments);
+        }
+
+        public static SyntaxTriviaList ConstructLeadingTrivia(SyntaxNode node, SyntaxTrivia leadingSpaceTrivia, SyntaxTrivia eolTrivia)
+        {
+            SyntaxTriviaList sourceTrivia = node.GetLeadingTrivia();
+            return ConstructLeadingTrivia(sourceTrivia, leadingSpaceTrivia, eolTrivia);
+        }
+
+        public static SyntaxTriviaList ConstructTrailingTrivia(SyntaxNode node, SyntaxTrivia eolTrivia)
+        {
+            SyntaxTriviaList trailingTrivia = node.GetTrailingTrivia();
+            IList<SyntaxTrivia> comments = ConstructSingleLineCommentsTrivia(trailingTrivia, 1, eolTrivia);
+            return comments.IsEmpty() ? new SyntaxTriviaList(eolTrivia) : new SyntaxTriviaList(comments);
+        }
+
+        private static Int32 CalcLeadingSpaceTriviaSize(SyntaxNode node)
+        {
+            IReadOnlyList<SyntaxTrivia> leadingTrivia = node.GetLeadingTrivia();
+            Int32 lastEndOfLineIndex = leadingTrivia.Count - 1;
+            while (lastEndOfLineIndex >= 0)
+            {
+                if (leadingTrivia[lastEndOfLineIndex].IsKind(SyntaxKind.EndOfLineTrivia))
+                    break;
+                --lastEndOfLineIndex;
+            }
+            Int32 totalSpaceSize = 0;
+            for (Int32 index = lastEndOfLineIndex + 1; index < leadingTrivia.Count; ++index)
+                totalSpaceSize += leadingTrivia[index].Span.Length;
+            return totalSpaceSize;
         }
     }
 }
