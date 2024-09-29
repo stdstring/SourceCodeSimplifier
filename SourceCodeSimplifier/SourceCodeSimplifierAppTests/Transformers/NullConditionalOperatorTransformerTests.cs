@@ -91,8 +91,10 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                           "        }\r\n" +
                                           "    }\r\n" +
                                           "}";
-            String expectedOutput = outputLevel == OutputLevel.Info ? ExpectedOutputForInfoLevel : "";
-            TransformerHelper transformerHelper = new TransformerHelper(source, "ObjectInitializerExpression", outputLevel);
+            String expectedOutput = "";
+            if (outputLevel == OutputLevel.Info)
+                expectedOutput = String.Format(ExpectedOutputForInfoLevelTemplate, CreateOnePassOutputs(5));
+            TransformerHelper transformerHelper = new TransformerHelper(source, "NullConditionalOperator", outputLevel);
             transformerHelper.Process(_transformerOnFactory, expectedOutput, expectedResult);
             transformerHelper.Process(_transformerOffFactory, "", source);
         }
@@ -184,8 +186,10 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                           "        }\r\n" +
                                           "    }\r\n" +
                                           "}";
-            String expectedOutput = outputLevel == OutputLevel.Info ? ExpectedOutputForInfoLevel : "";
-            TransformerHelper transformerHelper = new TransformerHelper(source, "ObjectInitializerExpression", outputLevel);
+            String expectedOutput = "";
+            if (outputLevel == OutputLevel.Info)
+                expectedOutput = String.Format(ExpectedOutputForInfoLevelTemplate, CreateOnePassOutputs(5));
+            TransformerHelper transformerHelper = new TransformerHelper(source, "NullConditionalOperator", outputLevel);
             transformerHelper.Process(_transformerOnFactory, expectedOutput, expectedResult);
             transformerHelper.Process(_transformerOffFactory, "", source);
         }
@@ -237,8 +241,10 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                           "        }\r\n" +
                                           "    }\r\n" +
                                           "}";
-            String expectedOutput = outputLevel == OutputLevel.Info ? ExpectedOutputForInfoLevel : "";
-            TransformerHelper transformerHelper = new TransformerHelper(source, "ObjectInitializerExpression", outputLevel);
+            String expectedOutput = "";
+            if (outputLevel == OutputLevel.Info)
+                expectedOutput = String.Format(ExpectedOutputForInfoLevelTemplate, CreateOnePassOutputs(2));
+            TransformerHelper transformerHelper = new TransformerHelper(source, "NullConditionalOperator", outputLevel);
             transformerHelper.Process(_transformerOnFactory, expectedOutput, expectedResult);
             transformerHelper.Process(_transformerOffFactory, "", source);
         }
@@ -308,8 +314,10 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                           "        }\r\n" +
                                           "    }\r\n" +
                                           "}";
-            String expectedOutput = outputLevel == OutputLevel.Info ? ExpectedOutputForInfoLevel : "";
-            TransformerHelper transformerHelper = new TransformerHelper(source, "ObjectInitializerExpression", outputLevel);
+            String expectedOutput = "";
+            if (outputLevel == OutputLevel.Info)
+                expectedOutput = String.Format(ExpectedOutputForInfoLevelTemplate, CreateOnePassOutputs(2));
+            TransformerHelper transformerHelper = new TransformerHelper(source, "NullConditionalOperator", outputLevel);
             transformerHelper.Process(_transformerOnFactory, expectedOutput, expectedResult);
             transformerHelper.Process(_transformerOffFactory, "", source);
         }
@@ -381,8 +389,10 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                           "        }\r\n" +
                                           "    }\r\n" +
                                           "}";
-            String expectedOutput = outputLevel == OutputLevel.Info ? ExpectedOutputForInfoLevel : "";
-            TransformerHelper transformerHelper = new TransformerHelper(source, "ObjectInitializerExpression", outputLevel);
+            String expectedOutput = "";
+            if (outputLevel == OutputLevel.Info)
+                expectedOutput = String.Format(ExpectedOutputForInfoLevelTemplate, CreateOnePassOutputs(2));
+            TransformerHelper transformerHelper = new TransformerHelper(source, "NullConditionalOperator", outputLevel);
             transformerHelper.Process(_transformerOnFactory, expectedOutput, expectedResult);
             transformerHelper.Process(_transformerOffFactory, "", source);
         }
@@ -400,8 +410,8 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                   "        public void SomeMethod()\r\n" +
                                   "        {\r\n" +
                                   "            AnotherData anotherData = new AnotherData();\r\n" +
-                                  "            string value = (anotherData.CreateOtherData() ?? CreateDefaultOtherData() ?? CreateDefaultOtherData2())?.CreateSomeData()?.CreateStr();\r\n" +
-                                  "            string value2 = (anotherData.Process()?.CreateOtherData() ?? CreateDefaultOtherData() ?? CreateDefaultOtherData2())?.CreateSomeData()?.CreateStr();\r\n" +
+                                  "            string value = (anotherData.CreateOtherData() ?? CreateDefaultOtherData() ?? CreateDefaultOtherData2()).Process()?.CreateSomeData()?.CreateStr();\r\n" +
+                                  "            string value2 = (anotherData.Process()?.CreateOtherData() ?? CreateDefaultOtherData() ?? CreateDefaultOtherData2()).Process()?.CreateSomeData()?.CreateStr();\r\n" +
                                   "        }\r\n" +
                                   "        public string CreateDefaultStr()\r\n" +
                                   "        {\r\n" +
@@ -417,9 +427,66 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                   "        }\r\n" +
                                   "    }\r\n" +
                                   "}";
-            const String expectedResult = "";
-            String expectedOutput = outputLevel == OutputLevel.Info ? ExpectedOutputForInfoLevel : "";
-            TransformerHelper transformerHelper = new TransformerHelper(source, "ObjectInitializerExpression", outputLevel);
+            const String expectedResult = "namespace SomeNamespace\r\n" +
+                                          "{\r\n" +
+                                          CommonDefinitions +
+                                          "    public class SomeClass\r\n" +
+                                          "    {\r\n" +
+                                          "        public void SomeMethod()\r\n" +
+                                          "        {\r\n" +
+                                          "            AnotherData anotherData = new AnotherData();\r\n" +
+                                          "            string value = default(string);\r\n" +
+                                          "            SomeNamespace.OtherData condExpression = (anotherData.CreateOtherData() ?? CreateDefaultOtherData() ?? CreateDefaultOtherData2()).Process();\r\n" +
+                                          "            if (condExpression != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                SomeNamespace.SomeData condExpression2 = condExpression.CreateSomeData();\r\n" +
+                                          "                if (condExpression2 != null)\r\n" +
+                                          "                {\r\n" +
+                                          "                    value = condExpression2.CreateStr();\r\n" +
+                                          "                }\r\n" +
+                                          "            }\r\n" +
+                                          "            SomeNamespace.OtherData expression = default(SomeNamespace.OtherData);\r\n" +
+                                          "            SomeNamespace.AnotherData condExpression3 = anotherData.Process();\r\n" +
+                                          "            if (condExpression3 != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                expression = condExpression3.CreateOtherData();\r\n" +
+                                          "            }\r\n" +
+                                          "            if (expression == null)\r\n" +
+                                          "            {\r\n" +
+                                          "                expression = CreateDefaultOtherData() ?? CreateDefaultOtherData2();\r\n" +
+                                          "            }\r\n" +
+                                          "            string value2 = default(string);\r\n" +
+                                          "            SomeNamespace.OtherData condExpression4 = expression.Process();\r\n" +
+                                          "            if (condExpression4 != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                SomeNamespace.SomeData condExpression5 = condExpression4.CreateSomeData();\r\n" +
+                                          "                if (condExpression5 != null)\r\n" +
+                                          "                {\r\n" +
+                                          "                    value2 = condExpression5.CreateStr();\r\n" +
+                                          "                }\r\n" +
+                                          "            }\r\n" +
+                                          "        }\r\n" +
+                                          "        public string CreateDefaultStr()\r\n" +
+                                          "        {\r\n" +
+                                          "            return \"\";\r\n" +
+                                          "        }\r\n" +
+                                          "        public OtherData CreateDefaultOtherData()\r\n" +
+                                          "        {\r\n" +
+                                          "            return new OtherData();\r\n" +
+                                          "        }\r\n" +
+                                          "        public OtherData CreateDefaultOtherData2()\r\n" +
+                                          "        {\r\n" +
+                                          "            return new OtherData();\r\n" +
+                                          "        }\r\n" +
+                                          "    }\r\n" +
+                                          "}";
+            String expectedOutput = "";
+            if (outputLevel == OutputLevel.Info)
+            {
+                String iterations = String.Join("", new []{ CreateNPassOutput(1), CreateNPassOutput(2)});
+                expectedOutput = String.Format(ExpectedOutputForInfoLevelTemplate, iterations);
+            }
+            TransformerHelper transformerHelper = new TransformerHelper(source, "NullConditionalOperator", outputLevel);
             transformerHelper.Process(_transformerOnFactory, expectedOutput, expectedResult);
             transformerHelper.Process(_transformerOffFactory, "", source);
         }
@@ -456,9 +523,66 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                   "        }\r\n" +
                                   "    }\r\n" +
                                   "}";
-            const String expectedResult = "";
-            String expectedOutput = outputLevel == OutputLevel.Info ? ExpectedOutputForInfoLevel : "";
-            TransformerHelper transformerHelper = new TransformerHelper(source, "ObjectInitializerExpression", outputLevel);
+            const String expectedResult = "namespace SomeNamespace\r\n" +
+                                          "{\r\n" +
+                                          CommonDefinitions +
+                                          "    public class SomeClass\r\n" +
+                                          "    {\r\n" +
+                                          "        public void SomeMethod()\r\n" +
+                                          "        {\r\n" +
+                                          "            AnotherData anotherData = new AnotherData();\r\n" +
+                                          "            string value = \"\";\r\n" +
+                                          "            string value2 = \"\";\r\n" +
+                                          "            SomeNamespace.OtherData condExpression = (anotherData.CreateOtherData() ?? CreateDefaultOtherData() ?? CreateDefaultOtherData2());\r\n" +
+                                          "            if (condExpression != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                SomeNamespace.SomeData condExpression2 = condExpression.CreateSomeData();\r\n" +
+                                          "                if (condExpression2 != null)\r\n" +
+                                          "                {\r\n" +
+                                          "                    value = condExpression2.CreateStr();\r\n" +
+                                          "                }\r\n" +
+                                          "            }\r\n" +
+                                          "            SomeNamespace.OtherData expression = default(SomeNamespace.OtherData);\r\n" +
+                                          "            SomeNamespace.AnotherData condExpression3 = anotherData.Process();\r\n" +
+                                          "            if (condExpression3 != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                expression = condExpression3.CreateOtherData();\r\n" +
+                                          "            }\r\n" +
+                                          "            if (expression == null)\r\n" +
+                                          "            {\r\n" +
+                                          "                expression = CreateDefaultOtherData() ?? CreateDefaultOtherData2();\r\n" +
+                                          "            }\r\n" +
+                                          "            SomeNamespace.OtherData condExpression4 = expression;\r\n" +
+                                          "            if (condExpression4 != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                SomeNamespace.SomeData condExpression5 = condExpression4.CreateSomeData();\r\n" +
+                                          "                if (condExpression5 != null)\r\n" +
+                                          "                {\r\n" +
+                                          "                    value2 = condExpression5.CreateStr();\r\n" +
+                                          "                }\r\n" +
+                                          "            }\r\n" +
+                                          "        }\r\n" +
+                                          "        public string CreateDefaultStr()\r\n" +
+                                          "        {\r\n" +
+                                          "            return \"\";\r\n" +
+                                          "        }\r\n" +
+                                          "        public OtherData CreateDefaultOtherData()\r\n" +
+                                          "        {\r\n" +
+                                          "            return new OtherData();\r\n" +
+                                          "        }\r\n" +
+                                          "        public OtherData CreateDefaultOtherData2()\r\n" +
+                                          "        {\r\n" +
+                                          "            return new OtherData();\r\n" +
+                                          "        }\r\n" +
+                                          "    }\r\n" +
+                                          "}";
+            String expectedOutput = "";
+            if (outputLevel == OutputLevel.Info)
+            {
+                String iterations = String.Join("", new[] {CreateNPassOutput(1), CreateNPassOutput(2)});
+                expectedOutput = String.Format(ExpectedOutputForInfoLevelTemplate, iterations);
+            }
+            TransformerHelper transformerHelper = new TransformerHelper(source, "NullConditionalOperator", outputLevel);
             transformerHelper.Process(_transformerOnFactory, expectedOutput, expectedResult);
             transformerHelper.Process(_transformerOffFactory, "", source);
         }
@@ -493,9 +617,64 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                   "        }\r\n" +
                                   "    }\r\n" +
                                   "}";
-            const String expectedResult = "";
-            String expectedOutput = outputLevel == OutputLevel.Info ? ExpectedOutputForInfoLevel : "";
-            TransformerHelper transformerHelper = new TransformerHelper(source, "ObjectInitializerExpression", outputLevel);
+            const String expectedResult = "namespace SomeNamespace\r\n" +
+                                          "{\r\n" +
+                                          CommonDefinitions +
+                                          "    public class SomeClass\r\n" +
+                                          "    {\r\n" +
+                                          "        public void SomeMethod()\r\n" +
+                                          "        {\r\n" +
+                                          "            AnotherData anotherData = new AnotherData();\r\n" +
+                                          "            SomeNamespace.OtherData condExpression = (anotherData.CreateOtherData() ?? CreateDefaultOtherData() ?? CreateDefaultOtherData2());\r\n" +
+                                          "            if (condExpression != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                SomeNamespace.SomeData condExpression2 = condExpression.CreateSomeData();\r\n" +
+                                          "                if (condExpression2 != null)\r\n" +
+                                          "                {\r\n" +
+                                          "                    condExpression2.DoIt();\r\n" +
+                                          "                }\r\n" +
+                                          "            }\r\n" +
+                                          "            SomeNamespace.OtherData expression = default(SomeNamespace.OtherData);\r\n" +
+                                          "            SomeNamespace.AnotherData condExpression3 = anotherData.Process();\r\n" +
+                                          "            if (condExpression3 != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                expression = condExpression3.CreateOtherData();\r\n" +
+                                          "            }\r\n" +
+                                          "            if (expression == null)\r\n" +
+                                          "            {\r\n" +
+                                          "                expression = CreateDefaultOtherData() ?? CreateDefaultOtherData2();\r\n" +
+                                          "            }\r\n" +
+                                          "            SomeNamespace.OtherData condExpression4 = expression;\r\n" +
+                                          "            if (condExpression4 != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                SomeNamespace.SomeData condExpression5 = condExpression4.CreateSomeData();\r\n" +
+                                          "                if (condExpression5 != null)\r\n" +
+                                          "                {\r\n" +
+                                          "                    condExpression5.DoIt();\r\n" +
+                                          "                }\r\n" +
+                                          "            }\r\n" +
+                                          "        }\r\n" +
+                                          "        public string CreateDefaultStr()\r\n" +
+                                          "        {\r\n" +
+                                          "            return \"\";\r\n" +
+                                          "        }\r\n" +
+                                          "        public OtherData CreateDefaultOtherData()\r\n" +
+                                          "        {\r\n" +
+                                          "            return new OtherData();\r\n" +
+                                          "        }\r\n" +
+                                          "        public OtherData CreateDefaultOtherData2()\r\n" +
+                                          "        {\r\n" +
+                                          "            return new OtherData();\r\n" +
+                                          "        }\r\n" +
+                                          "    }\r\n" +
+                                          "}";
+            String expectedOutput = "";
+            if (outputLevel == OutputLevel.Info)
+            {
+                String iterations = String.Join("", new[] {CreateNPassOutput(1), CreateNPassOutput(2)});
+                expectedOutput = String.Format(ExpectedOutputForInfoLevelTemplate, iterations);
+            }
+            TransformerHelper transformerHelper = new TransformerHelper(source, "NullConditionalOperator", outputLevel);
             transformerHelper.Process(_transformerOnFactory, expectedOutput, expectedResult);
             transformerHelper.Process(_transformerOffFactory, "", source);
         }
@@ -557,8 +736,10 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                           "        }\r\n" +
                                           "    }\r\n" +
                                           "}";
-            String expectedOutput = outputLevel == OutputLevel.Info ? ExpectedOutputForInfoLevel : "";
-            TransformerHelper transformerHelper = new TransformerHelper(source, "ObjectInitializerExpression", outputLevel);
+            String expectedOutput = "";
+            if (outputLevel == OutputLevel.Info)
+                expectedOutput = String.Format(ExpectedOutputForInfoLevelTemplate, CreateOnePassOutputs(2));
+            TransformerHelper transformerHelper = new TransformerHelper(source, "NullConditionalOperator", outputLevel);
             transformerHelper.Process(_transformerOnFactory, expectedOutput, expectedResult);
             transformerHelper.Process(_transformerOffFactory, "", source);
         }
@@ -636,8 +817,10 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                           "        }\r\n" +
                                           "    }\r\n" +
                                           "}";
-            String expectedOutput = outputLevel == OutputLevel.Info ? ExpectedOutputForInfoLevel : "";
-            TransformerHelper transformerHelper = new TransformerHelper(source, "ObjectInitializerExpression", outputLevel);
+            String expectedOutput = "";
+            if (outputLevel == OutputLevel.Info)
+                expectedOutput = String.Format(ExpectedOutputForInfoLevelTemplate, CreateOnePassOutputs(2));
+            TransformerHelper transformerHelper = new TransformerHelper(source, "NullConditionalOperator", outputLevel);
             transformerHelper.Process(_transformerOnFactory, expectedOutput, expectedResult);
             transformerHelper.Process(_transformerOffFactory, "", source);
         }
@@ -677,9 +860,111 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                   "        }\r\n" +
                                   "    }\r\n" +
                                   "}";
-            const String expectedResult = "";
-            String expectedOutput = outputLevel == OutputLevel.Info ? ExpectedOutputForInfoLevel : "";
-            TransformerHelper transformerHelper = new TransformerHelper(source, "ObjectInitializerExpression", outputLevel);
+            const String expectedResult = "namespace SomeNamespace\r\n" +
+                                          "{\r\n" +
+                                          CommonDefinitions +
+                                          "    public class SomeClass\r\n" +
+                                          "    {\r\n" +
+                                          "        public void SomeMethod()\r\n" +
+                                          "        {\r\n" +
+                                          "            AnotherData anotherData = new AnotherData();\r\n" +
+                                          "            string str = default(string);\r\n" +
+                                          "            SomeNamespace.OtherData condExpression = (anotherData.CreateOtherData() ?? CreateDefaultOtherData() ?? CreateDefaultOtherData2());\r\n" +
+                                          "            if (condExpression != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                SomeNamespace.SomeData condExpression2 = condExpression.CreateSomeData();\r\n" +
+                                          "                if (condExpression2 != null)\r\n" +
+                                          "                {\r\n" +
+                                          "                    str = condExpression2.CreateStr();\r\n" +
+                                          "                }\r\n" +
+                                          "            }\r\n" +
+                                          "            OtherMethod(str);\r\n" +
+                                          "            SomeNamespace.OtherData expression = default(SomeNamespace.OtherData);\r\n" +
+                                          "            SomeNamespace.AnotherData condExpression3 = anotherData.Process();\r\n" +
+                                          "            if (condExpression3 != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                expression = condExpression3.CreateOtherData();\r\n" +
+                                          "            }\r\n" +
+                                          "            if (expression == null)\r\n" +
+                                          "            {\r\n" +
+                                          "                expression = CreateDefaultOtherData() ?? CreateDefaultOtherData2();\r\n" +
+                                          "            }\r\n" +
+                                          "            string str2 = default(string);\r\n" +
+                                          "            SomeNamespace.OtherData condExpression4 = expression;\r\n" +
+                                          "            if (condExpression4 != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                SomeNamespace.SomeData condExpression5 = condExpression4.CreateSomeData();\r\n" +
+                                          "                if (condExpression5 != null)\r\n" +
+                                          "                {\r\n" +
+                                          "                    str2 = condExpression5.CreateStr();\r\n" +
+                                          "                }\r\n" +
+                                          "            }\r\n" +
+                                          "            OtherMethod(str2);\r\n" +
+                                          "            string str3 = default(string);\r\n" +
+                                          "            SomeNamespace.OtherData condExpression6 = (anotherData.CreateOtherData() ?? CreateDefaultOtherData() ?? CreateDefaultOtherData2());\r\n" +
+                                          "            if (condExpression6 != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                SomeNamespace.SomeData condExpression7 = condExpression6.CreateSomeData();\r\n" +
+                                          "                if (condExpression7 != null)\r\n" +
+                                          "                {\r\n" +
+                                          "                    str3 = condExpression7.CreateStr();\r\n" +
+                                          "                }\r\n" +
+                                          "            }\r\n" +
+                                          "            if (str3 == null)\r\n" +
+                                          "            {\r\n" +
+                                          "                str3 = \"\";\r\n" +
+                                          "            }\r\n" +
+                                          "            OtherMethod(str3);\r\n" +
+                                          "            SomeNamespace.OtherData expression2 = default(SomeNamespace.OtherData);\r\n" +
+                                          "            SomeNamespace.AnotherData condExpression8 = anotherData.Process();\r\n" +
+                                          "            if (condExpression8 != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                expression2 = condExpression8.CreateOtherData();\r\n" +
+                                          "            }\r\n" +
+                                          "            if (expression2 == null)\r\n" +
+                                          "            {\r\n" +
+                                          "                expression2 = CreateDefaultOtherData() ?? CreateDefaultOtherData2();\r\n" +
+                                          "            }\r\n" +
+                                          "            string str4 = default(string);\r\n" +
+                                          "            SomeNamespace.OtherData condExpression9 = expression2;\r\n" +
+                                          "            if (condExpression9 != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                SomeNamespace.SomeData condExpression10 = condExpression9.CreateSomeData();\r\n" +
+                                          "                if (condExpression10 != null)\r\n" +
+                                          "                {\r\n" +
+                                          "                    str4 = condExpression10.CreateStr();\r\n" +
+                                          "                }\r\n" +
+                                          "            }\r\n" +
+                                          "            if (str4 == null)\r\n" +
+                                          "            {\r\n" +
+                                          "                str4 = \"\";\r\n" +
+                                          "            }\r\n" +
+                                          "            OtherMethod(str4);\r\n" +
+                                          "        }\r\n" +
+                                          "        public string CreateDefaultStr()\r\n" +
+                                          "        {\r\n" +
+                                          "            return \"\";\r\n" +
+                                          "        }\r\n" +
+                                          "        public OtherData CreateDefaultOtherData()\r\n" +
+                                          "        {\r\n" +
+                                          "            return new OtherData();\r\n" +
+                                          "        }\r\n" +
+                                          "        public OtherData CreateDefaultOtherData2()\r\n" +
+                                          "        {\r\n" +
+                                          "            return new OtherData();\r\n" +
+                                          "        }\r\n" +
+                                          "        public void OtherMethod(string str)\r\n" +
+                                          "        {\r\n" +
+                                          "        }\r\n" +
+                                          "    }\r\n" +
+                                          "}";
+            String expectedOutput = "";
+            if (outputLevel == OutputLevel.Info)
+            {
+                String iterations = String.Join("", new[] {CreateNPassOutput(1), CreateNPassOutput(2), CreateNPassOutput(1), CreateNPassOutput(2)});
+                expectedOutput = String.Format(ExpectedOutputForInfoLevelTemplate, iterations);
+            }
+            TransformerHelper transformerHelper = new TransformerHelper(source, "NullConditionalOperator", outputLevel);
             transformerHelper.Process(_transformerOnFactory, expectedOutput, expectedResult);
             transformerHelper.Process(_transformerOffFactory, "", source);
         }
@@ -739,8 +1024,10 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                           "        }\r\n" +
                                           "    }\r\n" +
                                           "}";
-            String expectedOutput = outputLevel == OutputLevel.Info ? ExpectedOutputForInfoLevel : "";
-            TransformerHelper transformerHelper = new TransformerHelper(source, "ObjectInitializerExpression", outputLevel);
+            String expectedOutput = "";
+            if (outputLevel == OutputLevel.Info)
+                expectedOutput = String.Format(ExpectedOutputForInfoLevelTemplate, CreateOnePassOutputs(2));
+            TransformerHelper transformerHelper = new TransformerHelper(source, "NullConditionalOperator", outputLevel);
             transformerHelper.Process(_transformerOnFactory, expectedOutput, expectedResult);
             transformerHelper.Process(_transformerOffFactory, "", source);
         }
@@ -808,15 +1095,18 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                           "            {\r\n" +
                                           "                returnExpression = CreateDefaultStr() ?? \"\";\r\n" +
                                           "            }\r\n" +
-                                          "            return returnExpression;\r\n        }\r\n" +
+                                          "            return returnExpression;\r\n" +
+                                          "        }\r\n" +
                                           "        public string CreateDefaultStr()\r\n" +
                                           "        {\r\n" +
                                           "            return \"\";\r\n" +
                                           "        }\r\n" +
                                           "    }\r\n" +
                                           "}";
-            String expectedOutput = outputLevel == OutputLevel.Info ? ExpectedOutputForInfoLevel : "";
-            TransformerHelper transformerHelper = new TransformerHelper(source, "ObjectInitializerExpression", outputLevel);
+            String expectedOutput = "";
+            if (outputLevel == OutputLevel.Info)
+                expectedOutput = String.Format(ExpectedOutputForInfoLevelTemplate, CreateOnePassOutputs(2));
+            TransformerHelper transformerHelper = new TransformerHelper(source, "NullConditionalOperator", outputLevel);
             transformerHelper.Process(_transformerOnFactory, expectedOutput, expectedResult);
             transformerHelper.Process(_transformerOffFactory, "", source);
         }
@@ -853,9 +1143,74 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                   "        }\r\n" +
                                   "    }\r\n" +
                                   "}";
-            const String expectedResult = "";
-            String expectedOutput = outputLevel == OutputLevel.Info ? ExpectedOutputForInfoLevel : "";
-            TransformerHelper transformerHelper = new TransformerHelper(source, "ObjectInitializerExpression", outputLevel);
+            const String expectedResult = "namespace SomeNamespace\r\n" +
+                                          "{\r\n" +
+                                          CommonDefinitions +
+                                          "    public class SomeClass\r\n" +
+                                          "    {\r\n" +
+                                          "        public string AnotherMethod(AnotherData anotherData)\r\n" +
+                                          "        {\r\n" +
+                                          "            string returnExpression = default(string);\r\n" +
+                                          "            SomeNamespace.OtherData condExpression = (anotherData.CreateOtherData() ?? CreateDefaultOtherData() ?? CreateDefaultOtherData2());\r\n" +
+                                          "            if (condExpression != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                SomeNamespace.SomeData condExpression2 = condExpression.CreateSomeData();\r\n" +
+                                          "                if (condExpression2 != null)\r\n" +
+                                          "                {\r\n" +
+                                          "                    returnExpression = condExpression2.CreateStr();\r\n" +
+                                          "                }\r\n" +
+                                          "            }\r\n" +
+                                          "            return returnExpression;\r\n" +
+                                          "        }\r\n" +
+                                          "        public string AnotherMethod2(AnotherData anotherData)\r\n" +
+                                          "        {\r\n" +
+                                          "            SomeNamespace.OtherData expression = default(SomeNamespace.OtherData);\r\n" +
+                                          "            SomeNamespace.AnotherData condExpression = anotherData.Process();\r\n" +
+                                          "            if (condExpression != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                expression = condExpression.CreateOtherData();\r\n" +
+                                          "            }\r\n" +
+                                          "            if (expression == null)\r\n" +
+                                          "            {\r\n" +
+                                          "                expression = CreateDefaultOtherData() ?? CreateDefaultOtherData2();\r\n" +
+                                          "            }\r\n" +
+                                          "            string returnExpression = default(string);\r\n" +
+                                          "            SomeNamespace.OtherData condExpression2 = expression;\r\n" +
+                                          "            if (condExpression2 != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                SomeNamespace.SomeData condExpression3 = condExpression2.CreateSomeData();\r\n" +
+                                          "                if (condExpression3 != null)\r\n" +
+                                          "                {\r\n" +
+                                          "                    returnExpression = condExpression3.CreateStr();\r\n" +
+                                          "                }\r\n" +
+                                          "            }\r\n" +
+                                          "            if (returnExpression == null)\r\n" +
+                                          "            {\r\n" +
+                                          "                returnExpression = \"\";\r\n" +
+                                          "            }\r\n" +
+                                          "            return returnExpression;\r\n" +
+                                          "        }\r\n" +
+                                          "        public string CreateDefaultStr()\r\n" +
+                                          "        {\r\n" +
+                                          "            return \"\";\r\n" +
+                                          "        }\r\n" +
+                                          "        public OtherData CreateDefaultOtherData()\r\n" +
+                                          "        {\r\n" +
+                                          "            return new OtherData();\r\n" +
+                                          "        }\r\n" +
+                                          "        public OtherData CreateDefaultOtherData2()\r\n" +
+                                          "        {\r\n" +
+                                          "            return new OtherData();\r\n" +
+                                          "        }\r\n" +
+                                          "    }\r\n" +
+                                          "}";
+            String expectedOutput = "";
+            if (outputLevel == OutputLevel.Info)
+            {
+                String iterations = String.Join("", new[] {CreateNPassOutput(1), CreateNPassOutput(2)});
+                expectedOutput = String.Format(ExpectedOutputForInfoLevelTemplate, iterations);
+            }
+            TransformerHelper transformerHelper = new TransformerHelper(source, "NullConditionalOperator", outputLevel);
             transformerHelper.Process(_transformerOnFactory, expectedOutput, expectedResult);
             transformerHelper.Process(_transformerOffFactory, "", source);
         }
@@ -900,7 +1255,22 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                                  "        }\r\n" +
                                                  "    }\r\n";
 
-        private const String ExpectedOutputForInfoLevel = $"Execution of {NullConditionalOperatorTransformer.Name} started\r\n" +
-                                                          $"Execution of {NullConditionalOperatorTransformer.Name} finished\r\n";
+        private String CreateOnePassOutputs(Int32 count)
+        {
+            String onePassTransformOutputForInfoLevel = string.Format(IterationTransformOutputForInfoLevel, 1);
+            return String.Join("", Enumerable.Range(0, count).Select(_ => onePassTransformOutputForInfoLevel));
+        }
+
+        private String CreateNPassOutput(Int32 passCount)
+        {
+            return String.Join("", Enumerable.Range(1, passCount).Select(iteration => String.Format(IterationTransformOutputForInfoLevel, iteration)));
+        }
+
+        private const String ExpectedOutputForInfoLevelTemplate = $"Execution of {NullConditionalOperatorTransformer.Name} started\r\n" +
+                                                                  "{0}" +
+                                                                  $"Execution of {NullConditionalOperatorTransformer.Name} finished\r\n";
+
+        private const String IterationTransformOutputForInfoLevel = "Transformation iteration number {0} started\r\n" +
+                                                                    "Transformation iteration number {0} finished\r\n";
     }
 }

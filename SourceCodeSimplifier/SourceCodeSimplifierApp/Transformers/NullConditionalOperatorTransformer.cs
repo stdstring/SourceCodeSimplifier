@@ -32,31 +32,45 @@ namespace SourceCodeSimplifierApp.Transformers
 
         private Document TransformImpl(Document source)
         {
-            DocumentEditor documentEditor = DocumentEditor.CreateAsync(source).Result;
-            SyntaxNode sourceRoot = source.GetSyntaxRootAsync().Result.Must();
-            ConditionalAccessExpressionSyntax[] conditionalAccessExpressions = sourceRoot
-                .DescendantNodes()
-                .OfType<ConditionalAccessExpressionSyntax>()
-                .ToArray();
-            StatementSyntax[] parentStatements = conditionalAccessExpressions
-                .Select(expression => expression.GetParentStatement())
-                .Distinct()
-                .ToArray();
             VariableManager variableManager = new VariableManager();
-            SemanticModel model = documentEditor.SemanticModel;
-            foreach (StatementSyntax parentStatement in parentStatements)
+            // TODO (std_string) : think about ability work without searching statements for processing on each iteration
+            Int32 iteration = 1;
+            Document current = source;
+            while (true)
             {
+                DocumentEditor documentEditor = DocumentEditor.CreateAsync(current).Result;
+                SyntaxNode root = current.GetSyntaxRootAsync().Result.Must();
+                ConditionalAccessExpressionSyntax[] conditionalAccessExpressions = root
+                    .DescendantNodes()
+                    .OfType<ConditionalAccessExpressionSyntax>()
+                    .ToArray();
+                StatementSyntax[] parentStatements = conditionalAccessExpressions
+                    .Select(expression => expression.GetParentStatement())
+                    .Distinct()
+                    .ToArray();
+                if (parentStatements.Length == 0)
+                    break;
+                _output.WriteInfoLine($"Transformation iteration number {iteration} started");
+                SemanticModel model = documentEditor.SemanticModel;
+                StatementSyntax firstParent = parentStatements.First();
                 NullConditionalOperatorRewriter rewriter = new NullConditionalOperatorRewriter(model, variableManager);
-                IList<StatementSyntax> destStatements = rewriter.Process(parentStatement);
-                documentEditor.ReplaceStatement(parentStatement, destStatements);
+                NullConditionalOperatorRewriterResult result = rewriter.Process(firstParent);
+                documentEditor.ReplaceStatement(firstParent, result.Statements);
+                current = documentEditor.GetChangedDocument();
+                _output.WriteInfoLine($"Transformation iteration number {iteration} finished");
+                if (result.Last)
+                    iteration = 1;
+                else
+                    ++iteration;
             }
-            Document destDocument = documentEditor.GetChangedDocument();
-            return destDocument;
+            return current;
         }
 
         private readonly IOutput _output;
         private readonly TransformerState _transformerState;
     }
+
+    internal record NullConditionalOperatorRewriterResult(Boolean Last, IList<StatementSyntax> Statements);
 
     internal class NullConditionalOperatorRewriter : CSharpSyntaxRewriter
     {
@@ -64,98 +78,81 @@ namespace SourceCodeSimplifierApp.Transformers
         {
             _model = model;
             _variableManager = variableManager;
-            _destStatements = new List<String>();
         }
 
-        public IList<StatementSyntax> Process(StatementSyntax sourceStatement)
+        public NullConditionalOperatorRewriterResult Process(StatementSyntax sourceStatement)
         {
-            _destStatements = new List<String>();
-            _includeTransformedSource = true;
             StatementSyntax destStatement = Visit(sourceStatement).MustCast<SyntaxNode, StatementSyntax>();
             IList<StatementSyntax> result = _destStatements.Select(statement => SyntaxFactory.ParseStatement(statement)).ToList();
-            if (_includeTransformedSource)
+            if (_includeTransformedSource || !_lastTransformations)
                 result.Add(destStatement);
-            return result;
+            return new NullConditionalOperatorRewriterResult(_lastTransformations, result);
         }
 
         public override SyntaxNode VisitConditionalAccessExpression(ConditionalAccessExpressionSyntax node)
         {
-            NullConditionalOperatorChildRewriter childRewriter = new NullConditionalOperatorChildRewriter(_model, _variableManager);
-            SyntaxNode result = childRewriter.VisitConditionalAccessExpression(node);
-            _destStatements.AddRange(childRewriter.Dest);
-            _includeTransformedSource = node.Parent switch
+            ConditionalAccessExpressionSyntax destExpression = base.VisitConditionalAccessExpression(node).MustCast<SyntaxNode, ConditionalAccessExpressionSyntax>();
+            if (!node.CanProcess())
+                return destExpression;
+            switch (node.Parent)
             {
-                AssignmentExpressionSyntax => false,
-                EqualsValueClauseSyntax{Parent: VariableDeclaratorSyntax{Parent: VariableDeclarationSyntax{Parent: LocalDeclarationStatementSyntax}}} => false,
-                ExpressionStatementSyntax => false,
-                _ => true
-            };
-            return result;
-        }
-
-        public override SyntaxNode? VisitBinaryExpression(BinaryExpressionSyntax node)
-        {
-            switch (node)
-            {
-                case var _ when node.IsKind(SyntaxKind.CoalesceExpression):
-                    return VisitCoalesceExpression(node);
-                default:
-                    return base.VisitBinaryExpression(node);
+                case BinaryExpressionSyntax{Left: var leftExpr, Parent: var parent} binaryExpr
+                    when binaryExpr.IsKind(SyntaxKind.CoalesceExpression) && leftExpr == node:
+                    return ProcessConditionalAccessExpression(destExpression, parent.Must());
+                case BinaryExpressionSyntax{Right: var rightExpr} binaryExpr
+                    when binaryExpr.IsKind(SyntaxKind.CoalesceExpression) && rightExpr == node:
+                    throw new InvalidOperationException("Unsupported null conditional operator in right part of coalesce expression");
+                case var parent:
+                    return ProcessConditionalAccessExpression(destExpression, parent.Must());
             }
-        }
-
-        private SyntaxNode VisitCoalesceExpression(BinaryExpressionSyntax node)
-        {
-            NullConditionalOperatorChildRewriter childRewriter = new NullConditionalOperatorChildRewriter(_model, _variableManager);
-            SyntaxNode result = childRewriter.VisitBinaryExpression(node);
-            _destStatements.AddRange(childRewriter.Dest);
-            _includeTransformedSource = node.Parent switch
-            {
-                AssignmentExpressionSyntax => false,
-                EqualsValueClauseSyntax{Parent: VariableDeclaratorSyntax{Parent: VariableDeclarationSyntax{Parent: LocalDeclarationStatementSyntax}}} => false,
-                ExpressionStatementSyntax => false,
-                _ => true
-            };
-            return result;
-        }
-
-        private readonly SemanticModel _model;
-        private readonly VariableManager _variableManager;
-        private IList<String> _destStatements;
-        private Boolean _includeTransformedSource = true;
-    }
-
-    internal class NullConditionalOperatorChildRewriter : CSharpSyntaxRewriter
-    {
-        public NullConditionalOperatorChildRewriter(SemanticModel model, VariableManager variableManager)
-        {
-            Dest = new List<String>();
-            _model = model;
-            _variableManager = variableManager;
         }
 
         public override SyntaxNode VisitBinaryExpression(BinaryExpressionSyntax node)
         {
             if (!node.IsKind(SyntaxKind.CoalesceExpression))
                 return node;
-            Boolean hasLeftConditionalAccessExpression = node.Left.DescendantNodes().OfType<ConditionalAccessExpressionSyntax>().Any();
-            Boolean hasRightConditionalAccessExpression = node.Right.DescendantNodes().OfType<ConditionalAccessExpressionSyntax>().Any();
+            Boolean hasLeftConditionalAccessExpression = (node.Left is ConditionalAccessExpressionSyntax) ||
+                                                         (node.Left.DescendantNodes().OfType<ConditionalAccessExpressionSyntax>().Any());
+            Boolean hasRightConditionalAccessExpression = (node.Right is ConditionalAccessExpressionSyntax) ||
+                                                          (node.Right.DescendantNodes().OfType<ConditionalAccessExpressionSyntax>().Any());
             if (hasRightConditionalAccessExpression)
                 throw new InvalidOperationException("Unsupported null conditional operator in right part of coalesce expression");
             if (!hasLeftConditionalAccessExpression)
                 return node;
+            return ProcessCoalesceExpression(node);
+        }
+
+        public override SyntaxNode VisitParenthesizedExpression(ParenthesizedExpressionSyntax node)
+        {
+            ParenthesizedExpressionSyntax destExpression = base.VisitParenthesizedExpression(node).MustCast<SyntaxNode, ParenthesizedExpressionSyntax>();
+            switch (destExpression.Expression)
+            {
+                case IdentifierNameSyntax identifier:
+                    _lastTransformations = false;
+                    return identifier.WithLeadingTrivia(destExpression.GetLeadingTrivia()).WithTrailingTrivia(destExpression.GetTrailingTrivia());
+                default:
+                    return destExpression;
+            }
+        }
+
+        private SyntaxNode ProcessCoalesceExpression(BinaryExpressionSyntax node)
+        {
             BinaryExpressionSyntax destExpression = base.VisitBinaryExpression(node).MustCast<SyntaxNode, BinaryExpressionSyntax>();
+            if (!node.CanProcess())
+                return destExpression;
             switch (node.Parent)
             {
                 case null:
                     throw new InvalidOperationException("Bad syntax tree: BinaryExpressionSyntax node without parent");
                 case AssignmentExpressionSyntax assignmentExpression:
                 {
+                    _includeTransformedSource = false;
                     StatementSyntax statement = assignmentExpression.Parent.MustCast<SyntaxNode, StatementSyntax>();
                     ProcessCoalescePart(assignmentExpression.Left, destExpression.Right, statement);
                     return destExpression;
                 }
                 case EqualsValueClauseSyntax {Parent: VariableDeclaratorSyntax {Parent: VariableDeclarationSyntax {Parent: LocalDeclarationStatementSyntax statement}}}:
+                    _includeTransformedSource = false;
                     ProcessCoalescePartForLocalDeclarationStatement(statement, destExpression);
                     return destExpression;
                 default:
@@ -164,24 +161,6 @@ namespace SourceCodeSimplifierApp.Transformers
                     return identifier;
             }
         }
-
-        public override SyntaxNode VisitConditionalAccessExpression(ConditionalAccessExpressionSyntax node)
-        {
-            ConditionalAccessExpressionSyntax destExpression = base.VisitConditionalAccessExpression(node).MustCast<SyntaxNode, ConditionalAccessExpressionSyntax>();
-            switch (node.Parent)
-            {
-                case BinaryExpressionSyntax{Left: var leftExpr, Parent: var parent} binaryExpr
-                    when binaryExpr.IsKind(SyntaxKind.CoalesceExpression) && leftExpr == node:
-                    return ProcessConditionalAccessExpression(destExpression, parent);
-                case BinaryExpressionSyntax{Right: var rightExpr} binaryExpr
-                    when binaryExpr.IsKind(SyntaxKind.CoalesceExpression) && rightExpr == node:
-                    throw new InvalidOperationException("Unsupported null conditional operator in right part of coalesce expression");
-                case var parent:
-                    return ProcessConditionalAccessExpression(destExpression, parent);
-            }
-        }
-
-        public IList<String> Dest { get; }
 
         private void ProcessCoalescePartForLocalDeclarationStatement(LocalDeclarationStatementSyntax statement, BinaryExpressionSyntax expression)
         {
@@ -203,32 +182,38 @@ namespace SourceCodeSimplifierApp.Transformers
                                        $"{outerLeadingTrivia}{{{eolTrivia}" +
                                        $"{innerLeadingTrivia}{namePart} = {rightPart};{eolTrivia}" +
                                        $"{outerLeadingTrivia}}}{eolTrivia}";
-            Dest.Add(coalesceStatement);
+            _destStatements.Add(coalesceStatement);
         }
 
-        private SyntaxNode ProcessConditionalAccessExpression(ConditionalAccessExpressionSyntax expr, SyntaxNode? parent)
+        private SyntaxNode ProcessConditionalAccessExpression(ConditionalAccessExpressionSyntax expr, SyntaxNode parent)
         {
+            StatementSyntax parentStatement = parent switch
+            {
+                StatementSyntax statement => statement,
+                _ => parent.FindParentStatement().Must()
+            };
             switch (parent)
             {
-                case null:
-                    throw new InvalidOperationException("Bad syntax tree: ConditionalAccessExpression node without parent");
                 case ConditionalAccessExpressionSyntax:
                     return expr;
                 case AssignmentExpressionSyntax assignmentExpression:
+                    _includeTransformedSource = false;
                     ProcessAssignmentStatement(assignmentExpression, expr);
                     return expr;
                 case EqualsValueClauseSyntax{Parent: VariableDeclaratorSyntax{Parent: VariableDeclarationSyntax{Parent: LocalDeclarationStatementSyntax statement}}}:
+                    _includeTransformedSource = false;
                     ProcessLocalDeclarationStatement(statement, expr);
                     return expr;
                 case ExpressionStatementSyntax statement:
+                    _includeTransformedSource = false;
                     ProcessSimpleStatement(statement, expr);
                     return expr;
                 case ArgumentSyntax argument:
-                    return ProcessArgument(argument, expr);
+                    return ProcessArgument(argument, expr, parentStatement);
                 case ReturnStatementSyntax:
-                    return ProcessWithLocalVariableCreation("returnExpression", expr);
+                    return ProcessWithLocalVariableCreation("returnExpression", expr, parentStatement);
                 default:
-                    return ProcessWithLocalVariableCreation("expression", expr);
+                    return ProcessWithLocalVariableCreation("expression", expr, parentStatement);
             }
         }
 
@@ -246,10 +231,10 @@ namespace SourceCodeSimplifierApp.Transformers
             SyntaxTriviaList trailingTrivia = TriviaHelper.ConstructTrailingTrivia(statement, eolTrivia);
             String defaultValue = TypeDefaultValueHelper.CreateDefaultValueForType(_model, variableType);
             String destLocalDeclaration = $"{leadingTrivia}{variableType} {identifier} = {defaultValue};{trailingTrivia}";
-            Dest.Add(destLocalDeclaration);
-            IList<ExpressionSyntax> conditionalExprParts = SplitParts(conditionalExpr);
+            _destStatements.Add(destLocalDeclaration);
+            IList<ExpressionSyntax> conditionalExprParts = conditionalExpr.SplitParts();
             AssignmentValuePartsProcessor partsProcessor = new AssignmentValuePartsProcessor(_model, _variableManager, statement, leadingSpaceTrivia, eolTrivia, identifier);
-            Dest.AddRange(partsProcessor.ProcessParts(conditionalExprParts));
+            _destStatements.AddRange(partsProcessor.ProcessParts(conditionalExprParts));
         }
 
         private void ProcessAssignmentStatement(AssignmentExpressionSyntax assignmentExpr, ConditionalAccessExpressionSyntax conditionalExpr)
@@ -258,21 +243,21 @@ namespace SourceCodeSimplifierApp.Transformers
             SyntaxTrivia leadingSpaceTrivia = TriviaHelper.GetLeadingSpaceTrivia(statement);
             SyntaxTrivia eolTrivia = TriviaHelper.GetTrailingEndOfLineTrivia(statement);
             String leftPartAssignment = $"{assignmentExpr.Left}";
-            IList<ExpressionSyntax> conditionalExprParts = SplitParts(conditionalExpr);
+            IList<ExpressionSyntax> conditionalExprParts = conditionalExpr.SplitParts();
             AssignmentValuePartsProcessor partsProcessor = new AssignmentValuePartsProcessor(_model, _variableManager, statement, leadingSpaceTrivia, eolTrivia, leftPartAssignment);
-            Dest.AddRange(partsProcessor.ProcessParts(conditionalExprParts));
+            _destStatements.AddRange(partsProcessor.ProcessParts(conditionalExprParts));
         }
 
         private void ProcessSimpleStatement(ExpressionStatementSyntax statement, ConditionalAccessExpressionSyntax conditionalExpr)
         {
             SyntaxTrivia leadingSpaceTrivia = TriviaHelper.GetLeadingSpaceTrivia(statement);
             SyntaxTrivia eolTrivia = TriviaHelper.GetTrailingEndOfLineTrivia(statement);
-            IList<ExpressionSyntax> conditionalExprParts = SplitParts(conditionalExpr);
+            IList<ExpressionSyntax> conditionalExprParts = conditionalExpr.SplitParts();
             SimpleStatementPartsProcessor partsProcessor = new SimpleStatementPartsProcessor(_model, _variableManager, statement, leadingSpaceTrivia, eolTrivia);
-            Dest.AddRange(partsProcessor.ProcessParts(conditionalExprParts));
+            _destStatements.AddRange(partsProcessor.ProcessParts(conditionalExprParts));
         }
 
-        private SyntaxNode ProcessArgument(ArgumentSyntax argument, ConditionalAccessExpressionSyntax conditionalExpr)
+        private SyntaxNode ProcessArgument(ArgumentSyntax argument, ConditionalAccessExpressionSyntax conditionalExpr, StatementSyntax parentStatement)
         {
             IOperation? operationInfo = _model.GetOperation(argument);
             switch (operationInfo)
@@ -282,30 +267,38 @@ namespace SourceCodeSimplifierApp.Transformers
                 case IArgumentOperation {Parameter: null}:
                     throw new InvalidOperationException("Bad object initializer expression: absence parameter info");
                 case IArgumentOperation {Parameter: var parameterInfo}:
-                    return ProcessWithLocalVariableCreation(parameterInfo.Name, conditionalExpr);
+                    return ProcessWithLocalVariableCreation(parameterInfo.Name, conditionalExpr, parentStatement);
                 default:
                     throw new InvalidOperationException("Bad object initializer expression: unknown operation info");
             }
         }
 
-        private SyntaxNode ProcessWithLocalVariableCreation(String variableNamePrefix, ConditionalAccessExpressionSyntax conditionalExpr)
+        private SyntaxNode ProcessWithLocalVariableCreation(String variableNamePrefix, ConditionalAccessExpressionSyntax conditionalExpr, StatementSyntax parentStatement)
         {
-            StatementSyntax statement = conditionalExpr.FindParentStatement().Must();
-            String variableName = _variableManager.GenerateVariableName(statement, variableNamePrefix);
+            String variableName = _variableManager.GenerateVariableName(parentStatement, variableNamePrefix);
             String variableType = _model.ResolveExpressionType(conditionalExpr);
-            SyntaxTrivia leadingSpaceTrivia = TriviaHelper.GetLeadingSpaceTrivia(statement);
-            SyntaxTrivia eolTrivia = TriviaHelper.GetTrailingEndOfLineTrivia(statement);
+            SyntaxTrivia leadingSpaceTrivia = TriviaHelper.GetLeadingSpaceTrivia(parentStatement);
+            SyntaxTrivia eolTrivia = TriviaHelper.GetTrailingEndOfLineTrivia(parentStatement);
             String defaultValue = TypeDefaultValueHelper.CreateDefaultValueForExpression(_model, conditionalExpr);
             String destLocalDeclaration = $"{leadingSpaceTrivia}{variableType} {variableName} = {defaultValue};{eolTrivia}";
-            Dest.Add(destLocalDeclaration);
-            IList<ExpressionSyntax> conditionalExprParts = SplitParts(conditionalExpr);
-            AssignmentValuePartsProcessor partsProcessor = new AssignmentValuePartsProcessor(_model, _variableManager, statement, leadingSpaceTrivia, eolTrivia, variableName);
-            Dest.AddRange(partsProcessor.ProcessParts(conditionalExprParts));
+            _destStatements.Add(destLocalDeclaration);
+            IList<ExpressionSyntax> conditionalExprParts = conditionalExpr.SplitParts();
+            AssignmentValuePartsProcessor partsProcessor = new AssignmentValuePartsProcessor(_model, _variableManager, parentStatement, leadingSpaceTrivia, eolTrivia, variableName);
+            _destStatements.AddRange(partsProcessor.ProcessParts(conditionalExprParts));
             return SyntaxFactory.IdentifierName(variableName);
         }
 
+        private readonly SemanticModel _model;
+        private readonly VariableManager _variableManager;
+        private readonly IList<String> _destStatements = new List<String>();
+        private Boolean _includeTransformedSource = true;
+        private Boolean _lastTransformations = true;
+    }
+
+    internal static class NullConditionalOperatorRewriterHelper
+    {
         // TODO (std_string) : think about more elegance solution
-        private IList<ExpressionSyntax> SplitParts(ConditionalAccessExpressionSyntax conditionalAccessExpression)
+        public static IList<ExpressionSyntax> SplitParts(this ConditionalAccessExpressionSyntax conditionalAccessExpression)
         {
             IList<ExpressionSyntax> parts = new List<ExpressionSyntax>();
             while (true)
@@ -323,13 +316,74 @@ namespace SourceCodeSimplifierApp.Transformers
             }
         }
 
-        private readonly SemanticModel _model;
-        private readonly VariableManager _variableManager;
+        public static Boolean CanProcess(this ConditionalAccessExpressionSyntax expression)
+        {
+            return !expression.DescendantNodes()
+                .OfType<ParenthesizedExpressionSyntax>()
+                .Select(expr => expr.Expression)
+                .Any(HasExpressionForProcessing);
+        }
+
+        public static Boolean CanProcess(this BinaryExpressionSyntax expression)
+        {
+            if (!expression.IsKind(SyntaxKind.CoalesceExpression))
+                return true;
+            return !expression.DescendantNodes()
+                .OfType<ParenthesizedExpressionSyntax>()
+                .Select(expr => expr.Expression)
+                .Any(HasExpressionForProcessing);
+        }
+
+        private static Boolean HasExpressionForProcessing(this ExpressionSyntax expression)
+        {
+            return expression.DescendantNodes().OfType<ConditionalAccessExpressionSyntax>().Any();
+        }
+    }
+
+    internal static class ExpressionResolverHelper
+    {
+        public static String ResolveExpressionType(this SemanticModel model, ExpressionSyntax expression)
+        {
+            TypeInfo typeInfo = model.GetTypeInfo(expression);
+            return typeInfo.Type switch
+            {
+                null => throw new InvalidOperationException("Unknown semantic info"),
+                // TODO (std_string) : think about specifying of format
+                var typeSymbol => typeSymbol.ToDisplayString()
+            };
+        }
+    }
+
+    internal static class TypeDefaultValueHelper
+    {
+        public static String CreateDefaultValueForType(SemanticModel model, TypeSyntax type)
+        {
+            return $"default({type})";
+        }
+
+        public static String CreateDefaultValueForExpression(SemanticModel model, ExpressionSyntax expression)
+        {
+            return CreateDefaultValue(model.GetTypeInfo(expression));
+        }
+
+        private static String CreateDefaultValue(TypeInfo typeInfo)
+        {
+            return typeInfo.Type switch
+            {
+                null => throw new InvalidOperationException("Unknown semantic info"),
+                // TODO (std_string) : think about specifying of format
+                var typeSymbol => $"default({typeSymbol})"
+            };
+        }
     }
 
     internal abstract class ExpressionPartsProcessor
     {
-        public ExpressionPartsProcessor(SemanticModel model, VariableManager variableManager, StatementSyntax parentStatement, SyntaxTrivia leadingSpaceTrivia, SyntaxTrivia eolTrivia)
+        public ExpressionPartsProcessor(SemanticModel model,
+                                        VariableManager variableManager,
+                                        StatementSyntax parentStatement,
+                                        SyntaxTrivia leadingSpaceTrivia,
+                                        SyntaxTrivia eolTrivia)
         {
             ParentStatement = parentStatement;
             _model = model;
@@ -411,7 +465,11 @@ namespace SourceCodeSimplifierApp.Transformers
 
     internal class SimpleStatementPartsProcessor : ExpressionPartsProcessor
     {
-        public SimpleStatementPartsProcessor(SemanticModel model, VariableManager variableManager, StatementSyntax parentStatement, SyntaxTrivia leadingSpaceTrivia, SyntaxTrivia eolTrivia)
+        public SimpleStatementPartsProcessor(SemanticModel model,
+                                             VariableManager variableManager,
+                                             StatementSyntax parentStatement,
+                                             SyntaxTrivia leadingSpaceTrivia,
+                                             SyntaxTrivia eolTrivia)
             : base(model, variableManager, parentStatement, leadingSpaceTrivia, eolTrivia)
         {
         }
@@ -421,62 +479,6 @@ namespace SourceCodeSimplifierApp.Transformers
             SyntaxTriviaList leadingTrivia = TriviaHelper.ConstructLeadingTrivia(ParentStatement, leadingSpaceTrivia, eolTrivia);
             SyntaxTriviaList trailingTrivia = TriviaHelper.ConstructTrailingTrivia(ParentStatement, eolTrivia);
             return $"{leadingTrivia}{conditionalExprPartPrefix}{lastPart};{trailingTrivia}";
-        }
-    }
-
-    internal static class ExpressionResolverHelper
-    {
-        public static String ResolveExpressionType(this SemanticModel model, ExpressionSyntax expression)
-        {
-            TypeInfo typeInfo = model.GetTypeInfo(expression);
-            return typeInfo.Type switch
-            {
-                null => throw new InvalidOperationException("Unknown semantic info"),
-                // TODO (std_string) : think about specifying of format
-                var typeSymbol => typeSymbol.ToDisplayString()
-            };
-        }
-
-        /*public static String ResolveExpressionType(this SemanticModel model, ExpressionSyntax expression)
-        {
-            SymbolInfo expressionInfo = model.GetSymbolInfo(expression);
-            return GetExpressionType(expressionInfo.Symbol);
-        }
-
-        private static String GetExpressionType(ISymbol? symbol)
-        {
-            return symbol switch
-            {
-                null => throw new InvalidOperationException("Unknown semantic info"),
-                // TODO (std_string) : think about specifying of format
-                ITypeSymbol typeSymbol => typeSymbol.ToDisplayString(),
-                IMethodSymbol {ReturnsVoid: true} => throw new InvalidOperationException("Expression type is void"),
-                IMethodSymbol methodSymbol => GetExpressionType(methodSymbol.ReturnType),
-                _ => throw new InvalidOperationException("Unsupported semantic info")
-            };
-        }*/
-    }
-
-    internal static class TypeDefaultValueHelper
-    {
-        public static String CreateDefaultValueForType(SemanticModel model, TypeSyntax type)
-        {
-            return CreateDefaultValue(model.GetTypeInfo(type));
-        }
-
-        public static String CreateDefaultValueForExpression(SemanticModel model, ExpressionSyntax expression)
-        {
-            return CreateDefaultValue(model.GetTypeInfo(expression));
-        }
-
-        private static String CreateDefaultValue(TypeInfo typeInfo)
-        {
-            return typeInfo.Type switch
-            {
-                null => throw new InvalidOperationException("Unknown semantic info"),
-                // TODO (std_string) : think about specifying of format
-                var typeSymbol => $"default({typeSymbol})"
-            };
         }
     }
 }
