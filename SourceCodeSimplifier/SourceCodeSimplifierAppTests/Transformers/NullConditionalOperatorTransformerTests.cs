@@ -1215,6 +1215,129 @@ namespace SourceCodeSimplifierAppTests.Transformers
             transformerHelper.Process(_transformerOffFactory, "", source);
         }
 
+        [TestCase(OutputLevel.Error)]
+        [TestCase(OutputLevel.Warning)]
+        [TestCase(OutputLevel.Info)]
+        public void ProcessComplexCaseOfInnerExpr(OutputLevel outputLevel)
+        {
+            const String source = "namespace SomeNamespace\r\n" +
+                                  "{\r\n" +
+                                  CommonDefinitions +
+                                  "    public class SomeClass\r\n" +
+                                  "    {\r\n" +
+                                  "        public void SomeMethod()\r\n" +
+                                  "        {\r\n" +
+                                  "            AnotherData anotherData = new AnotherData();\r\n" +
+                                  "            string value = ((anotherData.Process()?.CreateOtherData() ?? CreateDefaultOtherData())?.Process() ?? CreateDefaultOtherData())?.CreateSomeData()?.CreateStr() ?? \"\";\r\n" +
+                                  "        }\r\n" +
+                                  "        public OtherData CreateDefaultOtherData()\r\n" +
+                                  "        {\r\n" +
+                                  "            return new OtherData();\r\n" +
+                                  "        }\r\n" +
+                                  "        public string AnotherMethod(AnotherData anotherData)\r\n" +
+                                  "        {\r\n" +
+                                  "            return ((anotherData.Process()?.CreateOtherData() ?? CreateDefaultOtherData())?.Process() ?? CreateDefaultOtherData())?.CreateSomeData()?.CreateStr() ?? \"\";\r\n" +
+                                  "        }\r\n" +
+                                  "    }\r\n" +
+                                  "}";
+            const String expectedResult = "namespace SomeNamespace\r\n" +
+                                          "{\r\n" +
+                                          CommonDefinitions +
+                                          "    public class SomeClass\r\n" +
+                                          "    {\r\n" +
+                                          "        public void SomeMethod()\r\n" +
+                                          "        {\r\n" +
+                                          "            AnotherData anotherData = new AnotherData();\r\n" +
+                                          "            SomeNamespace.OtherData expression = default(SomeNamespace.OtherData);\r\n" +
+                                          "            SomeNamespace.AnotherData condExpression = anotherData.Process();\r\n" +
+                                          "            if (condExpression != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                expression = condExpression.CreateOtherData();\r\n" +
+                                          "            }\r\n" +
+                                          "            if (expression == null)\r\n" +
+                                          "            {\r\n" +
+                                          "                expression = CreateDefaultOtherData();\r\n" +
+                                          "            }\r\n" +
+                                          "            SomeNamespace.OtherData expression2 = default(SomeNamespace.OtherData);\r\n" +
+                                          "            SomeNamespace.OtherData condExpression2 = expression;\r\n" +
+                                          "            if (condExpression2 != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                expression2 = condExpression2.Process();\r\n" +
+                                          "            }\r\n" +
+                                          "            if (expression2 == null)\r\n" +
+                                          "            {\r\n" +
+                                          "                expression2 = CreateDefaultOtherData();\r\n" +
+                                          "            }\r\n" +
+                                          "            string value = default(string);\r\n" +
+                                          "            SomeNamespace.OtherData condExpression3 = expression2;\r\n" +
+                                          "            if (condExpression3 != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                SomeNamespace.SomeData condExpression4 = condExpression3.CreateSomeData();\r\n" +
+                                          "                if (condExpression4 != null)\r\n" +
+                                          "                {\r\n" +
+                                          "                    value = condExpression4.CreateStr();\r\n" +
+                                          "                }\r\n" +
+                                          "            }\r\n" +
+                                          "            if (value == null)\r\n" +
+                                          "            {\r\n" +
+                                          "                value = \"\";\r\n" +
+                                          "            }\r\n" +
+                                          "        }\r\n" +
+                                          "        public OtherData CreateDefaultOtherData()\r\n" +
+                                          "        {\r\n" +
+                                          "            return new OtherData();\r\n" +
+                                          "        }\r\n" +
+                                          "        public string AnotherMethod(AnotherData anotherData)\r\n" +
+                                          "        {\r\n" +
+                                          "            SomeNamespace.OtherData expression = default(SomeNamespace.OtherData);\r\n" +
+                                          "            SomeNamespace.AnotherData condExpression = anotherData.Process();\r\n" +
+                                          "            if (condExpression != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                expression = condExpression.CreateOtherData();\r\n" +
+                                          "            }\r\n" +
+                                          "            if (expression == null)\r\n" +
+                                          "            {\r\n" +
+                                          "                expression = CreateDefaultOtherData();\r\n" +
+                                          "            }\r\n" +
+                                          "            SomeNamespace.OtherData expression2 = default(SomeNamespace.OtherData);\r\n" +
+                                          "            SomeNamespace.OtherData condExpression2 = expression;\r\n" +
+                                          "            if (condExpression2 != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                expression2 = condExpression2.Process();\r\n" +
+                                          "            }\r\n" +
+                                          "            if (expression2 == null)\r\n" +
+                                          "            {\r\n" +
+                                          "                expression2 = CreateDefaultOtherData();\r\n" +
+                                          "            }\r\n" +
+                                          "            string returnExpression = default(string);\r\n" +
+                                          "            SomeNamespace.OtherData condExpression3 = expression2;\r\n" +
+                                          "            if (condExpression3 != null)\r\n" +
+                                          "            {\r\n" +
+                                          "                SomeNamespace.SomeData condExpression4 = condExpression3.CreateSomeData();\r\n" +
+                                          "                if (condExpression4 != null)\r\n" +
+                                          "                {\r\n" +
+                                          "                    returnExpression = condExpression4.CreateStr();\r\n" +
+                                          "                }\r\n" +
+                                          "            }\r\n" +
+                                          "            if (returnExpression == null)\r\n" +
+                                          "            {\r\n" +
+                                          "                returnExpression = \"\";\r\n" +
+                                          "            }\r\n" +
+                                          "            return returnExpression;\r\n" +
+                                          "        }\r\n" +
+                                          "    }\r\n" +
+                                          "}";
+            String expectedOutput = "";
+            if (outputLevel == OutputLevel.Info)
+            {
+                String iterations = String.Join("", new[] {CreateNPassOutput(3), CreateNPassOutput(3)});
+                expectedOutput = String.Format(ExpectedOutputForInfoLevelTemplate, iterations);
+            }
+            TransformerHelper transformerHelper = new TransformerHelper(source, "NullConditionalOperator", outputLevel);
+            transformerHelper.Process(_transformerOnFactory, expectedOutput, expectedResult);
+            transformerHelper.Process(_transformerOffFactory, "", source);
+        }
+
         private readonly Func<IOutput, ITransformer> _transformerOnFactory = output => new NullConditionalOperatorTransformer(output, TransformerState.On);
         private readonly Func<IOutput, ITransformer> _transformerOffFactory = output => new NullConditionalOperatorTransformer(output, TransformerState.Off);
 
@@ -1237,6 +1360,9 @@ namespace SourceCodeSimplifierAppTests.Transformers
                                                  "        public OtherData Process()\r\n" +
                                                  "        {\r\n" +
                                                  "            return this;\r\n" +
+                                                 "        }\r\n" +
+                                                 "        public void CopyFrom(OtherData data)\r\n" +
+                                                 "        {\r\n" +
                                                  "        }\r\n" +
                                                  "    }\r\n" +
                                                  "    public class AnotherData\r\n" +
