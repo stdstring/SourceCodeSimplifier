@@ -14,7 +14,7 @@ Source code simplification tool intended for converting some specific constructi
 1. implementation of transformer for **nameof** expressions **(implemented)**
 1. implementation of transformer for string interpolation expression **(implemented)**
 1. implementation of transformer for null-conditional operators **(implemented)**
-1. implementation of transformer for **out** inline variables
+1. implementation of transformer for **out** inline variables **(implemented)**
 
 ## Phase 2:
 
