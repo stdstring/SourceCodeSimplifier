@@ -38,7 +38,10 @@ namespace SourceCodeSimplifierApp.Transformers
                 throw new InvalidOperationException("Bad source document (without syntax tree)");
             ObjectCreationExpressionSyntax[] objectCreationExpressions = sourceRoot.DescendantNodes()
                 .OfType<ObjectCreationExpressionSyntax>()
+                .Where(expr => expr.Initializer != null)
                 .ToArray();
+            if (objectCreationExpressions.IsEmpty())
+                return source;
             StatementSyntax[] parentStatements = objectCreationExpressions
                 .Select(expression => expression.GetParentStatement())
                 .Distinct()
