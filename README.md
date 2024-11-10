@@ -19,3 +19,8 @@ Source code simplification tool intended for converting some specific constructi
 ## Phase 2:
 
 1. implementation of transformer for expression-bodied properties and methods
+1. implementation of transformer for properties with initializer
+1. implementation of transformer for simple pattern match expressions: type casting and null checking
+1. implementation of transformer for yield expression
+1. implementation of transformer for Assert.Multiple call
+1. implementation of ability for source code copying
