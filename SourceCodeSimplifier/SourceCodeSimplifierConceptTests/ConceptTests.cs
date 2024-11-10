@@ -72,9 +72,7 @@ namespace SourceCodeSimplifierConceptTests
             if (semanticModel == null)
                 throw new InvalidOperationException();
             NameOfSyntaxRewriter rewriter = new NameOfSyntaxRewriter(semanticModel);
-            SyntaxNode? sourceRoot = sourceDocument.GetSyntaxRootAsync().Result;
-            if (sourceRoot is null)
-                throw new InvalidOperationException();
+            SyntaxNode sourceRoot = syntaxTree.GetRoot();
             SyntaxNode destRoot = rewriter.Visit(sourceRoot);
             Document destDocument = sourceDocument.WithSyntaxRoot(destRoot);
             return destDocument;
@@ -133,7 +131,7 @@ namespace SourceCodeSimplifierConceptTests
                         ObjectCreationExpressionSyntax newObjExpression = SyntaxFactory.ObjectCreationExpression(objExpression.Type, newArgs, null);
                         ExpressionSyntax assignmentLeft = assignmentExpression.Left;
                         AssignmentExpressionSyntax newAssignmentExpression = SyntaxFactory.AssignmentExpression(SyntaxKind.SimpleAssignmentExpression,
-                            assignmentExpression.Left,
+                            assignmentLeft,
                             newObjExpression);
                         ExpressionStatementSyntax newExpressionStatement = SyntaxFactory.ExpressionStatement(newAssignmentExpression)
                             .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken))
